@@ -1,0 +1,3091 @@
+{
+  "name": "GENERAL — Exército de IA v6",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "21cd91ad-6ab2-4fa5-bc40-2cba6b27a2a4",
+      "name": "Gatilho Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        3024,
+        4560
+      ],
+      "webhookId": "1be4a618-0ef8-48ac-bce7-7f055656d141",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "entrada-dashboard",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "eefce2ad-46b6-45ac-802a-273a41597d52",
+      "name": "Entrada Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        4752
+      ],
+      "webhookId": "dashboard-entrada-001"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "entrada-whatsapp",
+        "options": {}
+      },
+      "id": "01d64db6-8eb1-4d2d-948a-e3b6f50469c6",
+      "name": "Entrada WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        4944
+      ],
+      "webhookId": "whatsapp-entrada-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.all()[0];\nconst json = item.json;\n\nlet canal = 'dashboard';\nlet mensagem = '';\nlet usuario = 'Felipe';\nlet chat_id = 'dashboard';\nlet user_id = 6044282195;\n\nif (json.message && (json.message.text || json.message.voice)) {\n  canal = 'telegram';\n  mensagem = json.message.text || '[audio]';\n  chat_id = String(json.message.chat.id);\n  user_id = Number(json.message.from?.id || 6044282195);\n  usuario = json.message.from?.first_name || 'Felipe';\n} else {\n  const body = json.body || json;\n  canal = body.canal || 'dashboard';\n  mensagem = body.mensagem || body.message || body.texto || '';\n  usuario = body.usuario || 'Felipe';\n  chat_id = String(body.chat_id || body.session_id || 'dashboard');\n  user_id = Number(body.user_id || 6044282195);\n  if (canal === 'dashboard') user_id = 6044282195;\n}\n\nconst isCmd = mensagem.startsWith('/');\nconst parts = mensagem.trim().split(/\\s+/);\nconst cmd = isCmd ? parts[0].toLowerCase() : '';\nconst args = isCmd ? parts.slice(1) : [];\nconst session_id = chat_id && chat_id !== 'dashboard' ? chat_id : 'general';\n\nreturn [{ json: { canal, mensagem, usuario, chat_id, user_id, is_command: isCmd, cmd, args, ts: new Date().toISOString(), session_id } }];"
+      },
+      "id": "82b9fa1b-6f10-4666-a4e9-66ef7745e039",
+      "name": "Padronizar Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3248,
+        4752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.user_id }}",
+              "rightValue": 6044282195,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f74095f2-3871-4fa1-80df-4caac17bd78e",
+      "name": "Só Felipe",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3472,
+        4752
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "⛔ Acesso negado.",
+        "additionalFields": {}
+      },
+      "id": "05eaccf7-8870-4c1d-94e2-50e46774164f",
+      "name": "Negar Acesso",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3696,
+        4848
+      ],
+      "webhookId": "8d19ee28-5bcd-45fa-93b1-06b66484f577",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS general_logs (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), chat_id TEXT, user_id BIGINT, canal TEXT, tipo TEXT, payload JSONB);\nCREATE TABLE IF NOT EXISTS general_pending (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), chat_id TEXT, user_id BIGINT, status TEXT DEFAULT 'PENDENTE', pedido TEXT, previa TEXT, acao JSONB);\nCREATE TABLE IF NOT EXISTS general_agentes (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), nome TEXT UNIQUE, objetivo TEXT, pode TEXT, nao_pode TEXT, ferramentas TEXT, prompt_sistema TEXT, ativo BOOLEAN DEFAULT TRUE);\nCREATE TABLE IF NOT EXISTS general_sessions (chat_id TEXT PRIMARY KEY, estado TEXT, agente_em_criacao JSONB, ts TIMESTAMPTZ DEFAULT NOW());",
+        "options": {}
+      },
+      "id": "e72ab2f9-4bf3-466a-a960-d317baf191c8",
+      "name": "DB Init",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        3712,
+        4560
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/status' ? '/status' : '' }}",
+              "rightValue": "/status",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cfdec3da-a3d5-4020-96bc-6e332b9c5d9f",
+      "name": "É /status?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3920,
+        4496
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/aprovar' ? '/aprovar' : '' }}",
+              "rightValue": "/aprovar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d24cbf74-c471-4454-9af3-27875fd6eb58",
+      "name": "É /aprovar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4144,
+        4592
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/cancelar' ? '/cancelar' : '' }}",
+              "rightValue": "/cancelar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1847aeb2-3a34-4391-88a8-e1aa5f1165e5",
+      "name": "É /cancelar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4368,
+        4800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/relatorio' ? '/relatorio' : '' }}",
+              "rightValue": "/relatorio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "92bcb79b-30ac-4e38-9cce-b435654e85e1",
+      "name": "É /relatorio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4592,
+        4880
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/agentes' ? '/agentes' : '' }}",
+              "rightValue": "/agentes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "91ff7320-e060-424d-9446-45c5329f618e",
+      "name": "É /agentes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4816,
+        5040
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/ajuda' ? '/ajuda' : '' }}",
+              "rightValue": "/ajuda",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6504739b-9c3f-471e-b435-9f594c7c1f1f",
+      "name": "É /ajuda?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        4944
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.cmd === '/audio' ? '/audio' : '' }}",
+              "rightValue": "/audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e287232d-a7a5-492a-a880-997776254403",
+      "name": "É /audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5264,
+        4848
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, status, LEFT(pedido,60) as pedido, ts FROM general_pending WHERE chat_id='{{ $('Padronizar Entrada').first().json.chat_id }}' ORDER BY id DESC LIMIT 8;",
+        "options": {}
+      },
+      "id": "716f5eb1-95b0-4366-ab31-cd9ed904ec44",
+      "name": "DB Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4144,
+        4032
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst pend = rows.filter(r => r.status === 'PENDENTE').length;\nconst linhas = rows.map(r => `#${r.id} • ${r.status} • ${String(r.pedido).slice(0,50)}`);\nconst txt = ['🎖️ *GENERAL — Status*','',`📋 Pendentes: ${pend}`,'',linhas.length ? linhas.join('\\n') : '_Nenhuma tarefa._','','_/ajuda para comandos_'].join('\\n');\nreturn [{ json: { txt, chat_id: $('Padronizar Entrada').first().json.chat_id } }];"
+      },
+      "id": "7dc5d301-f066-479b-a710-9aa9368c4b16",
+      "name": "Formatar Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4368,
+        4032
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "946cc64b-c320-427e-ac81-a28e713063a5",
+      "name": "Enviar Status",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4592,
+        4032
+      ],
+      "webhookId": "0958a776-9a2c-4425-b4a4-50525e3073c5",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const args = $('Padronizar Entrada').first().json.args || [];\nconst id = Number(args[0] || 0);\nif (!id) return [{ json: { ok: false, msg: '⚠️ Use: /aprovar 5' } }];\nreturn [{ json: { ok: true, id } }];"
+      },
+      "id": "84e55257-0fb9-46e0-b581-faebe7eaedf8",
+      "name": "Parse Aprovar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4368,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1bd78de8-8b81-4823-94b5-7f23dd2d92da",
+      "name": "ID Aprovar OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4592,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE general_pending SET status='APROVADO' WHERE id={{ $json.id }} AND chat_id='{{ $('Padronizar Entrada').first().json.chat_id }}' RETURNING id, acao, previa, pedido;",
+        "options": {}
+      },
+      "id": "1a5d4cdd-7f51-4c2d-b3bd-cf00b8ee3c78",
+      "name": "DB Aprovar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4816,
+        4224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error?.message ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b93c6b8b-d0f7-4eb8-a751-d48aee5ad67b",
+      "name": "DB Aprovar erro?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "Banco falhou.",
+        "additionalFields": {}
+      },
+      "id": "bde02004-94ce-4f43-afce-af00fb73f1d3",
+      "name": "Enviar Banco falhou",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        9088,
+        4368
+      ],
+      "webhookId": "c345c95f-5f18-4cee-b783-38e32d069037",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row.id) return [{ json: { ok: false, txt: '⚠️ Não encontrado.', tem_acao: false, acao: {} } }];\nconst acao = row.acao || {};\nconst plano_texto = row.previa || row.pedido || '';\nreturn [{ json: { ok: true, id: row.id, acao, previa: row.previa, pedido: row.pedido, plano_texto, tem_acao: Object.keys(acao).length > 0, txt: `✅ Aprovado #${row.id}! Executando...` } }];"
+      },
+      "id": "6a509498-c1dc-4399-b818-1b6c05af8d50",
+      "name": "Formatar Aprovação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5264,
+        4304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {}
+      },
+      "id": "9a69c130-2c7d-43ac-ae85-056e5ecd4635",
+      "name": "Enviar Aprovado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5488,
+        4304
+      ],
+      "webhookId": "f968a2be-a2a0-4c88-bce2-c6cc9cec5232",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.107.36.118:52049/api/agent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "38eabf50-25f7-4adc-8319-7034d5fc57fa",
+      "name": "OpenClaw - EXECUTE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5712,
+        4304
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Formatar Aprovação').first().json;\nreturn [{ json: prev }];"
+      },
+      "id": "2a549f8b-e8fc-48c2-b5e9-071330894ac6",
+      "name": "Restaurar item aprovação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5936,
+        4304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.tem_acao }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4b3a7973-a8ea-46ae-99c4-82049b4d3118",
+      "name": "Tem Ação PC?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6160,
+        4304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst acao = item.acao || {};\nconst tipo = String(acao.tipo || '').toLowerCase();\nconst chat_id = $('Padronizar Entrada').first().json.chat_id;\nlet task = 'ping';\nlet key = 'whoami';\nif (tipo === 'executar_pc' || tipo === 'pc' || tipo === 'rpa') {\n  task = 'run_powershell';\n  key = acao.comando || acao.key || (Array.isArray(acao.passos) && acao.passos[0]) || acao.passo || 'whoami';\n}\nif (!key || String(key).trim() === '') key = 'whoami';\nconst bodyParaWorker = { task, key, chat_id };\nreturn [{ json: { bodyParaWorker, chat_id } }];"
+      },
+      "id": "76d45743-7ba3-46b8-bd46-b31c9efc8349",
+      "name": "Converter acao para Worker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6512,
+        4368
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.107.36.118:8787",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-AGENT-TOKEN",
+              "value": "MEU_TOKEN_FORTE_123"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e3124e11-26d9-485d-9769-635e5798f401",
+      "name": "Executar no PC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6848,
+        4368
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst chat_id = $('Padronizar Entrada').first().json.chat_id;\nconst txt = item.error ? '⚠️ PC não respondeu. Verifica o worker.' : '✅ Concluído!';\nreturn [{ json: { txt, chat_id } }];"
+      },
+      "id": "f689c400-f4a1-4700-87bb-024c801b936f",
+      "name": "Resultado PC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7072,
+        4368
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {}
+      },
+      "id": "15982614-4c83-42ba-80dc-d5c3cc53e53e",
+      "name": "Enviar Concluído",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7296,
+        4304
+      ],
+      "webhookId": "4d6fcd7b-98a8-4263-a408-2b40c02382be",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const args = $('Padronizar Entrada').first().json.args || [];\nconst id = Number(args[0] || 0);\nif (!id) return [{ json: { ok: false, msg: '⚠️ Use: /cancelar 5' } }];\nreturn [{ json: { ok: true, id } }];"
+      },
+      "id": "f46cdb72-deff-4c59-8ae7-7fdbecf38b72",
+      "name": "Parse Cancelar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8192,
+        4512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d77348c3-b928-4f38-ab5c-3b42d79ebdfc",
+      "name": "ID Cancelar OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8416,
+        4512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE general_pending SET status='CANCELADO' WHERE id={{ $json.id }} AND chat_id='{{ $('Padronizar Entrada').first().json.chat_id }}' RETURNING id;",
+        "options": {}
+      },
+      "id": "0e90dc97-9734-4ec9-a0e8-2099cc840361",
+      "name": "DB Cancelar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        8640,
+        4512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error?.message ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a73a2127-29e5-4de0-8027-8ade8248b33c",
+      "name": "DB Cancelar erro?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8864,
+        4512
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "❌ Cancelado.",
+        "additionalFields": {}
+      },
+      "id": "2481532f-c75a-403b-8dab-d61a576a65b2",
+      "name": "Enviar Cancelado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        9088,
+        5008
+      ],
+      "webhookId": "5cce572c-6cfb-451d-b29d-bca0095664ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "⚠️ Use: /aprovar 5",
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-uso-aprovar-0001",
+      "name": "Enviar Uso Aprovar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4816,
+        4320
+      ],
+      "webhookId": "w001-aprovar-uso",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "⚠️ Use: /cancelar 5",
+        "additionalFields": {}
+      },
+      "id": "b2c3d4e5-uso-cancelar-0002",
+      "name": "Enviar Uso Cancelar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8640,
+        4608
+      ],
+      "webhookId": "w002-cancelar-uso",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "⚠️ Use: /audio seu texto aqui",
+        "additionalFields": {}
+      },
+      "id": "c3d4e5f6-uso-audio-0003",
+      "name": "Enviar Uso Audio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5936,
+        4848
+      ],
+      "webhookId": "w003-audio-uso",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as total, MAX(ts) as ultimo FROM general_logs WHERE chat_id='{{ $('Padronizar Entrada').first().json.chat_id }}';",
+        "options": {}
+      },
+      "id": "0d5471c0-be0e-4031-a905-1a73e9eb5237",
+      "name": "DB Relatório",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4816,
+        4656
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst ult = r.ultimo ? new Date(r.ultimo).toLocaleString('pt-BR') : 'Nenhum';\nreturn [{ json: { txt: `📊 *Relatório*\\n\\nLogs: ${r.total}\\nÚltimo: ${ult}`, chat_id: $('Padronizar Entrada').first().json.chat_id } }];"
+      },
+      "id": "8f1eb9cf-f9c3-413c-95e0-a519bb364c5f",
+      "name": "Formatar Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        4656
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "e140d489-dd76-4b45-9693-e04cec661822",
+      "name": "Enviar Relatório",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5264,
+        4656
+      ],
+      "webhookId": "4b92bb0b-7b50-435e-a24a-4f125d8279b7",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome, objetivo, ativo FROM general_agentes ORDER BY id;",
+        "options": {}
+      },
+      "id": "9bbf107d-677d-4b49-b94c-8810ad29c329",
+      "name": "DB Agentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5040,
+        5296
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nif (!rows.length) return [{ json: { txt: '🤖 Nenhum agente ainda. Peça ao General criar um!', chat_id: $('Padronizar Entrada').first().json.chat_id } }];\nconst linhas = rows.map(r => `${r.ativo ? '🟢' : '🔴'} *${r.nome}*: ${r.objetivo}`);\nreturn [{ json: { txt: '🤖 *Exército*\\n\\n' + linhas.join('\\n'), chat_id: $('Padronizar Entrada').first().json.chat_id } }];"
+      },
+      "id": "7f91e397-2052-4855-bcbf-c9e64c2e3da9",
+      "name": "Formatar Agentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5264,
+        5296
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "bb78d609-dca9-4410-bf6a-23ada45a7676",
+      "name": "Enviar Agentes",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5488,
+        5296
+      ],
+      "webhookId": "4e10a223-1c9f-473f-ac6a-9d1c681d4a55",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id ?? $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "={{ $json.txt ?? '🎖️ *Comandos disponíveis:*\n\n/status — Tarefas pendentes\n/aprovar 5 — Aprovar tarefa #5\n/cancelar 5 — Cancelar tarefa #5\n/relatorio — Resumo de execuções\n/agentes — Ver exército\n/audio texto — Receber em áudio\n/ajuda — Esta lista\n\n_Ou mande qualquer ordem em texto._' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "29b6d60b-2464-4060-8562-959e79ad2444",
+      "name": "Enviar Ajuda",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5264,
+        5104
+      ],
+      "webhookId": "2f4bffd7-8984-4278-89e4-195ac7cf6749",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const args = $('Padronizar Entrada').first().json.args || [];\nconst txt = args.join(' ').trim();\nif (!txt) return [{ json: { ok: false, chat_id: $('Padronizar Entrada').first().json.chat_id, msg: '⚠️ Use: /audio Olá Felipe!' } }];\nreturn [{ json: { ok: true, chat_id: $('Padronizar Entrada').first().json.chat_id, txt } }];"
+      },
+      "id": "670323ec-b941-47f6-b645-b3e619835542",
+      "name": "Parse Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5488,
+        4752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c4fa05fe-3bed-44b7-b870-eaa5ede01b77",
+      "name": "Tem Texto Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5712,
+        4752
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "=e4cb40238a641c0025b709ce022366846b4f73db8f57eabfb024f4b15ab6ade2"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ text: $json.txt, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }) }}",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "eafea891-9a38-4736-9514-012e3fd66614",
+      "name": "ElevenLabs TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5936,
+        4752
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nif (item.binary) {\n  const keys = Object.keys(item.binary);\n  const src = keys[0] || 'data';\n  if (src !== 'data') { item.binary.data = item.binary[src]; delete item.binary[src]; }\n}\nreturn [item];"
+      },
+      "id": "eed8894e-1024-4c15-9b9c-f65aa1061df2",
+      "name": "Preparar Áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6160,
+        4752
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "🎵 Áudio gerado!",
+        "additionalFields": {}
+      },
+      "id": "ade3721a-e245-4d1b-9357-43b355d396b9",
+      "name": "Enviar Áudio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6512,
+        4752
+      ],
+      "webhookId": "bd7fe678-cf74-4382-b2db-85b7868b718a",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO general_logs (chat_id, user_id, canal, tipo, payload) VALUES ('{{ $('Padronizar Entrada').first().json.chat_id }}', {{ $('Padronizar Entrada').first().json.user_id }}, '{{ $('Padronizar Entrada').first().json.canal }}', 'pedido', '{\"msg\": \"pedido recebido\"}'::jsonb);",
+        "options": {}
+      },
+      "id": "936dcff6-eb0c-4708-bab7-df2652e9d6f8",
+      "name": "Log Pedido",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5488,
+        5008
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT estado, agente_em_criacao FROM general_sessions WHERE chat_id = '{{ $('Padronizar Entrada').first().json.chat_id }}';",
+        "options": {}
+      },
+      "id": "74698980-77be-45dc-bcdb-c1ba3a3e7144",
+      "name": "Carregar Sessão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5712,
+        5488
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().length > 0 ? $input.all() : [{ json: { estado: '', agente_em_criacao: null } }];"
+      },
+      "id": "e1f2a3b4-sessao-min-001",
+      "name": "Sessão Vazia?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5824,
+        5488
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "multiplex",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "fe9fbb40-3989-448f-9654-393a260913c0",
+      "name": "Juntar Catálogo e Sessão",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        5936,
+        5408
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome, objetivo, pode, nao_pode, ferramentas FROM general_agentes WHERE ativo=TRUE ORDER BY id;",
+        "options": {}
+      },
+      "id": "40ddec0b-714d-4054-b9e0-e107f7689cf8",
+      "name": "Buscar Catálogo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5712,
+        5008
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst agentes = items.map(i => i.json).filter(j => j.nome != null);\nconst sessaoItem = items.find(i => i.json.estado !== undefined) || items[items.length - 1];\nconst session_estado = sessaoItem?.json?.estado || '';\nconst session_agente = sessaoItem?.json?.agente_em_criacao || null;\nconst catalogo = agentes.length ? agentes.map(a => `- ${a.nome}: ${a.objetivo} | PODE: ${a.pode} | NÃO PODE: ${a.nao_pode} | FERRAMENTAS: ${a.ferramentas}`).join('\\n') : 'Nenhum agente criado. Se Felipe pedir criar agente, pergunte: nome, objetivo, pode, não pode, ferramentas.';\nconst sessaoTexto = session_estado ? `\\nESTADO DA ENTREVISTA (criar agente): ${session_estado}. Dados parciais: ${JSON.stringify(session_agente || {})}. Continue de onde parou.` : '';\nreturn [{ json: { catalogo: catalogo + sessaoTexto, mensagem: $('Padronizar Entrada').first().json.mensagem, chat_id: $('Padronizar Entrada').first().json.chat_id } }];"
+      },
+      "id": "05e8bd11-1c8e-4c16-ae6a-fd3695ba49fd",
+      "name": "Montar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6160,
+        5408
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Você é o GENERAL — comandante do exército de agentes de IA do Felipe. Seu papel é RECEBER ordens e DELEGAR tarefas aos agentes certos. Você NÃO faz tudo sozinho: escolha qual agente do catálogo deve executar, orquestre e consolide as respostas.\n\nCATÁLOGO DE AGENTES (seus subordinados):\n{{ $json.catalogo }}\n\nREGRAS:\n1) Responda SEMPRE em JSON: {\"resposta\": \"texto\", \"precisa_aprovar\": false, \"previa\": \"\", \"agente_usado\": \"nome_do_agente ou general\", \"acao\": {}}\n2) Para cada pedido: decida qual agente pode fazer; se nenhum servir, use \"general\" e execute ou peça criar um agente.\n3) Ações perigosas (postar, pagar, apagar, enviar em massa, executar no PC): precisa_aprovar=true + previa clara.\n4) Criar agente: pergunte 1 coisa por vez. Quando tiver tudo, acao={\"tipo\":\"criar_agente\",\"nome\":\"\",\"objetivo\":\"\",\"pode\":\"\",\"nao_pode\":\"\",\"ferramentas\":\"\",\"prompt_sistema\":\"\"}.\n5) Ação no PC: acao={\"tipo\":\"executar_pc\",\"descricao\":\"\",\"passos\":[]}. Use a ferramenta 'Executar no PC via Gateway'.\n6) Editar agente: quando pedirem alterar um agente existente, acao={\"tipo\":\"editar_agente\",\"nome\":\"NomeDoAgente\",\"objetivo\":\"\",\"pode\":\"\",\"nao_pode\":\"\",\"ferramentas\":\"\",\"prompt_sistema\":\"\"} (nome = qual agente editar; outros = novos valores).\n7) Seja direto. Delegue sempre que possível."
+        }
+      },
+      "id": "77b9ce56-654f-413a-aa9f-c3e80d592842",
+      "name": "General (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        6448,
+        5408
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "5ac9a82f-6cd9-4aea-899d-cabed6f500d8",
+      "name": "Modelo GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        6368,
+        5616
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "26eON1fwGMrSnkGF",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 30
+      },
+      "id": "812baec4-5e5e-43e3-b6bd-fccacc65fd1b",
+      "name": "Memória do General",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        6512,
+        5632
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://100.107.36.118:8787",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-AGENT-TOKEN",
+              "value": "MEU_TOKEN_FORTE_123"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c47f1dce-30b2-434c-a53c-22ad9482befc",
+      "name": "Executar no PC via Gateway",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        6640,
+        5632
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nlet content = '';\nif (typeof raw.output === 'string') content = raw.output;\nelse if (typeof raw.output === 'object') content = JSON.stringify(raw.output);\nelse content = raw.content || raw.text || JSON.stringify(raw);\nlet parsed = {};\ntry {\n  const m = content.match(/\\{[\\s\\S]*\\}/);\n  parsed = m ? JSON.parse(m[0]) : { resposta: content, precisa_aprovar: false, previa: '', agente_usado: 'general', acao: {} };\n} catch(e) {\n  parsed = { resposta: content, precisa_aprovar: false, previa: '', agente_usado: 'general', acao: {} };\n}\nif (!parsed.resposta || parsed.resposta.trim() === '') parsed.resposta = content;\nconst hasAction = parsed.acao && Object.keys(parsed.acao).length > 0;\nconst tipo = String(parsed.tipo_acao || parsed.tipo || '').toLowerCase();\nconst perigoso = ['postar','pagar','apagar','enviar_em_massa','executar_pc','criar_agente','pc','rpa'].includes(tipo);\nif (hasAction || perigoso) parsed.precisa_aprovar = true;\nconst padrao = $('Padronizar Entrada').first().json;\nreturn [{ json: { ...parsed, chat_id: padrao.chat_id, canal: padrao.canal || 'telegram' } }];"
+      },
+      "id": "fca8260f-7d5e-4578-b50c-72a64a4665ff",
+      "name": "Ler Resposta General",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6848,
+        5408
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://100.107.36.118:52049/api/agent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "8199066f-90ba-427c-85a0-e88ba4a3d6f8",
+      "name": "OpenClaw - DRY RUN (Executar Plano)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7072,
+        5408
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst prev = $('Ler Resposta General').first().json;\nlet openclaw_erro = false;\nlet openclaw_msg = '';\nif (inp.error || inp.message) {\n  openclaw_erro = true;\n  openclaw_msg = inp.error || inp.message || 'OpenClaw indisponível';\n}\nreturn [{ json: { ...prev, openclaw_erro, openclaw_msg } }];"
+      },
+      "id": "301ad7c5-7f56-43da-a553-e81859f4a865",
+      "name": "Extrair resposta OpenClaw",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7296,
+        5408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.openclaw_erro }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "deac3f03-e60c-4b00-9251-9b52a08854d2",
+      "name": "OpenClaw falhou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7520,
+        5408
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "=⚠️ OpenClaw falhou: {{ $json.openclaw_msg || 'erro desconhecido' }}",
+        "additionalFields": {}
+      },
+      "id": "1701bc62-03f3-4ef8-8cfd-a181e6777c1e",
+      "name": "Enviar erro OpenClaw",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7744,
+        4912
+      ],
+      "webhookId": "6ef7a8d7-f6f2-4849-84bb-4a83015de387",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.precisa_aprovar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9e1b623c-a728-4c5c-8235-a412d96b9cfb",
+      "name": "Precisa Aprovar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7744,
+        5488
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.acao?.tipo }}",
+              "rightValue": "criar_agente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d333e0da-3fa4-4811-9eb9-e2ba60547717",
+      "name": "É Criar Agente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7968,
+        5296
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.acao?.tipo }}",
+              "rightValue": "editar_agente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2373db2c-8869-4e4c-bdea-7fbf59e78b63",
+      "name": "É Editar Agente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8192,
+        5392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $('Ler Resposta General').first().json; const a = g.acao || {}; const esc = s => String(s ?? '').replace(/'/g, \"''\"); return [{ json: { nome_esc: esc(a.nome), objetivo_esc: esc(a.objetivo), pode_esc: esc(a.pode), nao_pode_esc: esc(a.nao_pode), ferramentas_esc: esc(a.ferramentas), prompt_sistema_esc: esc(a.prompt_sistema) } }];"
+      },
+      "id": "ac1058f2-8b52-4c8c-8a26-577eabc5fe77",
+      "name": "Preparar Editar Agente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8416,
+        5216
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE general_agentes SET objetivo='{{ $json.objetivo_esc }}', pode='{{ $json.pode_esc }}', nao_pode='{{ $json.nao_pode_esc }}', ferramentas='{{ $json.ferramentas_esc }}', prompt_sistema='{{ $json.prompt_sistema_esc }}' WHERE nome='{{ $json.nome_esc }}' RETURNING id, nome;",
+        "options": {}
+      },
+      "id": "498d0129-eb48-4951-a34e-dc78faeafcdf",
+      "name": "DB Atualizar Agente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        8640,
+        5216
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "=🤖 Agente *{{ $json.nome }}* atualizado! ✅",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "92bc7d25-dd4c-4294-bcd0-11ce41916844",
+      "name": "Confirmar Agente Editado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8864,
+        5216
+      ],
+      "webhookId": "248930f5-7f22-48af-829c-b4f209da834f",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $('Ler Resposta General').first().json; const a = g.acao || {}; const esc = s => String(s ?? '').replace(/'/g, \"''\"); return [{ json: { nome_esc: esc(a.nome), objetivo_esc: esc(a.objetivo), pode_esc: esc(a.pode), nao_pode_esc: esc(a.nao_pode), ferramentas_esc: esc(a.ferramentas), prompt_sistema_esc: esc(a.prompt_sistema) } }];"
+      },
+      "id": "461b6925-2b1a-4244-aed0-ddbbe6447657",
+      "name": "Preparar Agente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8416,
+        5024
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO general_agentes (nome, objetivo, pode, nao_pode, ferramentas, prompt_sistema) VALUES ('{{ $json.nome_esc }}', '{{ $json.objetivo_esc }}', '{{ $json.pode_esc }}', '{{ $json.nao_pode_esc }}', '{{ $json.ferramentas_esc }}', '{{ $json.prompt_sistema_esc }}') ON CONFLICT (nome) DO UPDATE SET objetivo=EXCLUDED.objetivo, pode=EXCLUDED.pode, nao_pode=EXCLUDED.nao_pode, ferramentas=EXCLUDED.ferramentas, prompt_sistema=EXCLUDED.prompt_sistema, ativo=TRUE RETURNING id, nome;",
+        "options": {}
+      },
+      "id": "b08dfa1a-c747-4008-9f3d-b07d1f1b2784",
+      "name": "Salvar Agente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        8640,
+        5024
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Padronizar Entrada').first().json.chat_id }}",
+        "text": "=🤖 Agente *{{ $('Ler Resposta General').first().json.acao?.nome }}* criado e salvo! ✅",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "30b29485-2804-4a5c-9cb3-a6815e41b01c",
+      "name": "Confirmar Agente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8864,
+        5024
+      ],
+      "webhookId": "61b87d43-7930-4eb7-83e3-2d503658cb17",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM general_sessions WHERE chat_id = '{{ $('Padronizar Entrada').first().json.chat_id }}';",
+        "options": {}
+      },
+      "id": "9d17716d-d859-471c-9efe-d1432d5a3dab",
+      "name": "Limpar Sessão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        9088,
+        5200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.resposta }}",
+        "additionalFields": {}
+      },
+      "id": "e76674b3-6f6a-4d85-9b89-9710422bc019",
+      "name": "Resposta Direta",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8192,
+        5584
+      ],
+      "webhookId": "e7d90bb1-cf45-4cf2-b844-4dda8f911092",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.canal }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0222b6d0-ee7e-4a8e-bfdd-dfe8b8b71d56",
+      "name": "Canal é Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7968,
+        5680
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "947e1ceb-f293-4846-8437-2aecefe41dae",
+      "name": "Canal é Dashboard?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8192,
+        5776
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.WHATSAPP_RESPONSE_URL || 'https://example.com/whatsapp' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "7c012209-643f-40ec-acbc-f7a78d7705d0",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8416,
+        5872
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $('Ler Resposta General').first().json;\nconst padrao = $('Padronizar Entrada').first().json;\nconst esc = s => String(s ?? '').replace(/'/g, \"''\");\nconst pedido_esc = esc(g.resposta);\nconst previa_esc = esc(g.previa);\nconst acao = g.acao || {};\nconst acao_json = JSON.stringify(acao).replace(/'/g, \"''\");\nreturn [{ json: { chat_id: padrao.chat_id, user_id: padrao.user_id, pedido_esc, previa_esc, acao_json } }];"
+      },
+      "id": "4509070c-0856-4463-b4ce-a292cea3bd84",
+      "name": "Preparar Pendência",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8416,
+        5488
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO general_pending (chat_id, user_id, status, pedido, previa, acao) VALUES ('{{ $json.chat_id }}', {{ $json.user_id }}, 'PENDENTE', '{{ $json.pedido_esc }}', '{{ $json.previa_esc }}', ('{{ $json.acao_json }}')::jsonb) RETURNING id;",
+        "options": {}
+      },
+      "id": "2d1ef19a-9596-49a0-8979-96129626264a",
+      "name": "Criar Pendência",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        8640,
+        5488
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error?.message ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6b06b08e-0538-4f5f-ae73-82d00db78467",
+      "name": "Criar Pendência erro?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8864,
+        5488
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst id = Array.isArray(row) ? row[0]?.id : row.id;\nconst g = $('Ler Resposta General').first().json;\nconst txt = [`👀 *PRÉVIA #${id}*`, '', g.previa || g.resposta, '', `✅ /aprovar ${id}`, `❌ /cancelar ${id}`].join('\\n');\nreturn [{ json: { txt, chat_id: $('Padronizar Entrada').first().json.chat_id } }];"
+      },
+      "id": "c5e3324b-b68b-4f98-8479-101d2518febc",
+      "name": "Formatar Prévia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9088,
+        5536
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f0c5d84f-1818-44b0-bfc8-aec4c14230d1",
+      "name": "Enviar Prévia",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        9312,
+        5536
+      ],
+      "webhookId": "dd1d2a7e-420d-4a8e-8e6f-3fb41eebe23d",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, resposta: $('Ler Resposta General').first().json.resposta }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "48f46439-7a44-428f-9d48-7b706c3e64d4",
+      "name": "Responder Dashboard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        8416,
+        5680
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, resposta: $json.txt ?? $json.resposta ?? '' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-comando-dash-001",
+      "name": "Responder Dashboard Comando",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        4800,
+        5680
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, resposta: 'Acesso negado.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-negar-dash-002",
+      "name": "Responder Dashboard Acesso Negado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3920,
+        4928
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-if-status-003",
+      "name": "Canal Dashboard (Status)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        4032
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-if-ajuda-004",
+      "name": "Canal Dashboard (Ajuda)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5360,
+        5104
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5f6a7b8-if-relatorio-005",
+      "name": "Canal Dashboard (Relatório)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5360,
+        4656
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f6a7b8c9-if-agentes-006",
+      "name": "Canal Dashboard (Agentes)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5584,
+        5296
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Padronizar Entrada').first().json.canal }}",
+              "rightValue": "dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7b8c9d0-if-negar-007",
+      "name": "Canal Dashboard (negar)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        4848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const padrao = $('Padronizar Entrada').first().json;\nconst txt = '🎖️ *Comandos disponíveis:*\\n\\n/status — Tarefas pendentes\\n/aprovar 5 — Aprovar tarefa #5\\n/cancelar 5 — Cancelar tarefa #5\\n/relatorio — Resumo de execuções\\n/agentes — Ver exército\\n/audio texto — Receber em áudio\\n/ajuda — Esta lista\\n\\n_Ou mande qualquer ordem em texto._';\nreturn [{ json: { txt, chat_id: padrao.chat_id } }];"
+      },
+      "id": "b8c9d0e1-preparar-ajuda-008",
+      "name": "Preparar Ajuda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5168,
+        5104
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gatilho Telegram": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar Entrada": {
+      "main": [
+        [
+          {
+            "node": "Só Felipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Só Felipe": {
+      "main": [
+        [
+          {
+            "node": "DB Init",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Canal Dashboard (negar)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal Dashboard (negar)?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard Acesso Negado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar Acesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Init": {
+      "main": [
+        [
+          {
+            "node": "É /status?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /status?": {
+      "main": [
+        [
+          {
+            "node": "DB Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /aprovar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /aprovar?": {
+      "main": [
+        [
+          {
+            "node": "Parse Aprovar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /cancelar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /cancelar?": {
+      "main": [
+        [
+          {
+            "node": "Parse Cancelar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /relatorio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /relatorio?": {
+      "main": [
+        [
+          {
+            "node": "DB Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /agentes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /agentes?": {
+      "main": [
+        [
+          {
+            "node": "DB Agentes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /ajuda?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /ajuda?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Ajuda",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É /audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Ajuda": {
+      "main": [
+        [
+          {
+            "node": "Enviar Ajuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Ajuda": {
+      "main": [
+        [
+          {
+            "node": "Canal Dashboard (Ajuda)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal Dashboard (Ajuda)?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard Comando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É /audio?": {
+      "main": [
+        [
+          {
+            "node": "Parse Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Status": {
+      "main": [
+        [
+          {
+            "node": "Formatar Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Status": {
+      "main": [
+        [
+          {
+            "node": "Canal Dashboard (Status)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Status": {
+      "main": [
+        [
+        ]
+      ]
+    },
+    "Canal Dashboard (Status)?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard Comando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Aprovar": {
+      "main": [
+        [
+          {
+            "node": "ID Aprovar OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ID Aprovar OK?": {
+      "main": [
+        [
+          {
+            "node": "DB Aprovar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Uso Aprovar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Aprovar": {
+      "main": [
+        [
+          {
+            "node": "DB Aprovar erro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Aprovar erro?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Banco falhou",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Aprovação": {
+      "main": [
+        [
+          {
+            "node": "Enviar Aprovado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Aprovado": {
+      "main": [
+        [
+          {
+            "node": "OpenClaw - EXECUTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenClaw - EXECUTE": {
+      "main": [
+        [
+          {
+            "node": "Restaurar item aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restaurar item aprovação": {
+      "main": [
+        [
+          {
+            "node": "Tem Ação PC?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Ação PC?": {
+      "main": [
+        [
+          {
+            "node": "Converter acao para Worker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Concluído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converter acao para Worker": {
+      "main": [
+        [
+          {
+            "node": "Executar no PC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar no PC": {
+      "main": [
+        [
+          {
+            "node": "Resultado PC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado PC": {
+      "main": [
+        [
+          {
+            "node": "Enviar Concluído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Cancelar": {
+      "main": [
+        [
+          {
+            "node": "ID Cancelar OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ID Cancelar OK?": {
+      "main": [
+        [
+          {
+            "node": "DB Cancelar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Uso Cancelar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Cancelar": {
+      "main": [
+        [
+          {
+            "node": "DB Cancelar erro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Cancelar erro?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Banco falhou",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Cancelado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Relatório": {
+      "main": [
+        [
+          {
+            "node": "Formatar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Enviar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Canal Dashboard (Relatório)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal Dashboard (Relatório)?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard Comando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Agentes": {
+      "main": [
+        [
+          {
+            "node": "Formatar Agentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Agentes": {
+      "main": [
+        [
+          {
+            "node": "Enviar Agentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Agentes": {
+      "main": [
+        [
+          {
+            "node": "Canal Dashboard (Agentes)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal Dashboard (Agentes)?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard Comando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Agentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Audio": {
+      "main": [
+        [
+          {
+            "node": "Tem Texto Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Texto Audio?": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs TTS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Uso Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs TTS": {
+      "main": [
+        [
+          {
+            "node": "Preparar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Áudio": {
+      "main": [
+        [
+          {
+            "node": "Enviar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Pedido": {
+      "main": [
+        [
+          {
+            "node": "Buscar Catálogo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Carregar Sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Catálogo": {
+      "main": [
+        [
+          {
+            "node": "Juntar Catálogo e Sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar Sessão": {
+      "main": [
+        [
+          {
+            "node": "Sessão Vazia?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sessão Vazia?": {
+      "main": [
+        [
+          {
+            "node": "Juntar Catálogo e Sessão",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Juntar Catálogo e Sessão": {
+      "main": [
+        [
+          {
+            "node": "Montar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Contexto": {
+      "main": [
+        [
+          {
+            "node": "General (GPT-4o)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo GPT-4o": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General (GPT-4o)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória do General": {
+      "ai_memory": [
+        [
+          {
+            "node": "General (GPT-4o)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar no PC via Gateway": {
+      "ai_tool": [
+        [
+          {
+            "node": "General (GPT-4o)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General (GPT-4o)": {
+      "main": [
+        [
+          {
+            "node": "Ler Resposta General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Resposta General": {
+      "main": [
+        [
+          {
+            "node": "OpenClaw - DRY RUN (Executar Plano)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenClaw - DRY RUN (Executar Plano)": {
+      "main": [
+        [
+          {
+            "node": "Extrair resposta OpenClaw",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair resposta OpenClaw": {
+      "main": [
+        [
+          {
+            "node": "OpenClaw falhou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenClaw falhou?": {
+      "main": [
+        [
+          {
+            "node": "Enviar erro OpenClaw",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Precisa Aprovar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Precisa Aprovar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa Aprovar?": {
+      "main": [
+        [
+          {
+            "node": "É Criar Agente?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Canal é Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal é Telegram?": {
+      "main": [
+        [
+          {
+            "node": "Resposta Direta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Canal é Dashboard?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal é Dashboard?": {
+      "main": [
+        [
+          {
+            "node": "Responder Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Criar Agente?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Editar Agente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Editar Agente?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Editar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Pendência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Editar Agente": {
+      "main": [
+        [
+          {
+            "node": "DB Atualizar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Atualizar Agente": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Agente Editado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Agente Editado": {
+      "main": [
+        [
+          {
+            "node": "Limpar Sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Agente": {
+      "main": [
+        [
+          {
+            "node": "Salvar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Pendência": {
+      "main": [
+        [
+          {
+            "node": "Criar Pendência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Agente": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Agente": {
+      "main": [
+        [
+          {
+            "node": "Limpar Sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Pendência": {
+      "main": [
+        [
+          {
+            "node": "Criar Pendência erro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Pendência erro?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Banco falhou",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Prévia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Prévia": {
+      "main": [
+        [
+          {
+            "node": "Enviar Prévia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cdcde87d-5b2a-4e67-9224-829656caf320",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4727e7f30d147ce7ed4c5b239012c65105f64ef89a16fc3d825f9fec3507f155"
+  },
+  "id": "mzxarLhOLALe583b",
+  "tags": []
+}
