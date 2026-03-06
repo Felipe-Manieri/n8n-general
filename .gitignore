@@ -1,0 +1,5 @@
+# n8n
+*.n8n
+*.data
+# IDE
+.vscode/
