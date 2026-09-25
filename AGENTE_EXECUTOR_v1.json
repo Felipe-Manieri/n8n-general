@@ -1,0 +1,355 @@
+{
+  "name": "AGENTE EXECUTOR v1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agente-executor",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "02d08481-96fb-5e9f-9c4a-1c1243fc2b6e",
+      "name": "Executor Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "Agente Executor (webhook)"
+        }
+      },
+      "webhookId": "96bb0c28-e719-5e77-a09d-d459134cd949"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT nome,objetivo,pode,nao_pode,ferramentas,prompt_sistema,status,teste_ok,config FROM general_agentes WHERE nome='{{ String($json.body.agent || '').replace(/'/g, \"''\") }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "74bfb8ea-9905-55cb-b1d6-76fc67d341bd",
+      "name": "Carregar Agente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Executor Webhook').first().json.body || {};\nconst ag = $input.first().json;\nconst task_id = String(body.task_id || '');\nconst acao = String(body.acao || 'preparar_conteudo');\nconst respond = (status, result_pt, error_code, meta) => [{ json: { run: false, contract: { task_id, status, result_pt, ...(error_code ? { error_code } : {}), evidence: { verified: false, checks: [] }, ...(meta ? { meta } : {}) } } }];\nif (!task_id) return respond('failed', 'task_id ausente.', 'BAD_TASK_ID');\nif (!ag.nome) return respond('failed', 'Agente \"' + (body.agent || '?') + '\" não existe no catálogo.', 'AGENT_NOT_FOUND');\nconst cfg = ag.config || {};\nconst necess = Array.isArray(cfg.conexoes_necessarias) ? cfg.conexoes_necessarias : [];\nconst ok = Array.isArray(cfg.conexoes_ok) ? cfg.conexoes_ok : [];\nconst pendentes = necess.filter(c => !ok.includes(c));\nif (ag.status === 'pausado') return respond('failed', 'O agente está pausado.', 'AGENT_PAUSED');\nconst isTeste = acao === 'teste';\nif (!isTeste && !(['ativo', 'aguardando_conexao'].includes(ag.status) && ag.teste_ok === true)) return respond('failed', 'O agente ainda não passou no teste (status: ' + ag.status + '). Rode o teste antes.', 'AGENT_NOT_TESTED');\nconst requerConexao = /^(publicar|postar|enviar)/i.test(acao) || (Array.isArray(cfg.acoes_requerem_conexao) && cfg.acoes_requerem_conexao.includes(acao));\nif (requerConexao && pendentes.length) return respond('failed', 'Aguardando conexão: ' + pendentes.join(', ') + '. Configure a credencial no n8n e diga que está pronta.', 'CONNECTION_MISSING', { conexoes_pendentes: pendentes });\nif (!['teste', 'preparar_conteudo', 'responder'].includes(acao)) return respond('failed', 'A ação \"' + acao + '\" não é implementada neste modelo (v1 só cobre preparar_conteudo/responder/teste). Publicar/integrar exige um template de integração próprio.', 'NOT_IMPLEMENTED', { conexoes_pendentes: pendentes });\nconst tarefa = isTeste ? (cfg.tarefa_teste || 'Apresente-se em duas frases: quem você é e o que consegue fazer.') : String(body.tarefa || '');\nif (!tarefa.trim()) return respond('failed', 'Tarefa vazia.', 'EMPTY_TASK');\nconst system = (ag.prompt_sistema || 'Você é um agente especialista.') +\n  '\\n\\nOBJETIVO: ' + ag.objetivo + '\\nPODE: ' + ag.pode + '\\nNÃO PODE: ' + ag.nao_pode + '\\nFERRAMENTAS DECLARADAS: ' + ag.ferramentas +\n  '\\n\\nREGRAS: você só PREPARA conteúdo e respostas (texto). Você não publica, não envia e não acessa contas externas. Se a tarefa exigir algo fora do que PODE, diga claramente que não pode. Responda em português.';\nreturn [{ json: { run: true, task_id, agent: ag.nome, acao, tarefa, system, pendentes } }];"
+      },
+      "id": "17c67f58-cf27-5f8a-a726-411c56af12d4",
+      "name": "Preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "pe1",
+              "leftValue": "={{ $json.run }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb77aff0-ff51-56b1-94e9-c9b9b8d5afc9",
+      "name": "Pode Executar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.tarefa }}",
+        "options": {
+          "systemMessage": "={{ $json.system }}"
+        }
+      },
+      "id": "fd011d1d-5d08-5505-b53d-1b16a71bc6ff",
+      "name": "Agente LLM",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        960,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "db9a1b27-70eb-5a84-bbd6-ee041b7eab46",
+      "name": "Modelo",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        460
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "26eON1fwGMrSnkGF",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $('Preparar').first().json;\nconst r = $input.first().json;\nconst out = typeof r.output === 'string' ? r.output.trim() : '';\nif (r.error || !out) return [{ json: { ...p, falha: true, motivo: String((r.error && (r.error.message || r.error)) || 'o modelo não devolveu conteúdo').slice(0, 300) } }];\nreturn [{ json: { ...p, falha: false, conteudo: out, conteudo_esc: out.replace(/'/g, \"''\"), tam: out.length } }];"
+      },
+      "id": "afe07bcf-8ba6-5971-8212-2e48010181de",
+      "name": "Preparar Artefato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.falha ? 'SELECT 0 AS id WHERE FALSE;' : \"INSERT INTO general_artifacts (task_id,agent_name,tipo,conteudo) VALUES ('\" + $json.task_id + \"','\" + String($json.agent).replace(/'/g, \"''\") + \"','\" + $json.acao + \"','\" + $json.conteudo_esc + \"') RETURNING id;\" }}",
+        "options": {}
+      },
+      "id": "ae82b8fa-1496-53f8-a0b1-a55dc7da6a8c",
+      "name": "Salvar Artefato",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1480,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT id, length(conteudo) AS len FROM general_artifacts WHERE id = {{ Number($json.id || 0) }} AND task_id = '{{ $('Preparar Artefato').first().json.task_id }}';",
+        "options": {}
+      },
+      "id": "80674e4e-c311-547d-a12a-72fe02e30bf9",
+      "name": "Verificar Artefato",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1720,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evidência = leitura de volta do banco (não o texto do modelo).\nconst p = $('Preparar Artefato').first().json;\nconst row = $input.first().json;\nconst c = { task_id: p.task_id };\nif (p.falha) { c.status = 'failed'; c.result_pt = 'A geração falhou: ' + p.motivo; c.error_code = 'LLM_FAILED'; c.evidence = { verified: false, checks: [] }; }\nelse if (row.id && Number(row.len) === p.tam) {\n  c.status = 'completed';\n  c.result_pt = (p.acao === 'teste' ? 'Teste do agente concluído (geração + registro; NÃO testa integrações externas). ' : 'Rascunho gerado e salvo. Nada foi publicado/enviado. ') + 'Artefato #' + row.id + ':\\n' + p.conteudo.slice(0, 700);\n  c.evidence = { verified: true, kind: 'artifact', checks: [{ type: 'artifact_saved', id: row.id, ok: true, length: p.tam }] };\n} else { c.status = 'failed'; c.result_pt = 'O conteúdo foi gerado, mas não consegui confirmar o registro no banco.'; c.error_code = 'ARTIFACT_NOT_CONFIRMED'; c.evidence = { verified: false, checks: [{ type: 'artifact_saved', ok: false }] }; }\nc.meta = { conexoes_pendentes: p.pendentes || [] };\nreturn [{ json: { contract: c } }];"
+      },
+      "id": "95e5d08a-fa82-5c60-91c3-2ac0badb3731",
+      "name": "Montar Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.contract }}",
+        "options": {}
+      },
+      "id": "69d40d20-a00f-526a-97fc-d8be05221cfc",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Executor Webhook": {
+      "main": [
+        [
+          {
+            "node": "Carregar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar Agente": {
+      "main": [
+        [
+          {
+            "node": "Preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar": {
+      "main": [
+        [
+          {
+            "node": "Pode Executar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pode Executar?": {
+      "main": [
+        [
+          {
+            "node": "Agente LLM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente LLM": {
+      "main": [
+        [
+          {
+            "node": "Preparar Artefato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Artefato": {
+      "main": [
+        [
+          {
+            "node": "Salvar Artefato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Artefato": {
+      "main": [
+        [
+          {
+            "node": "Verificar Artefato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Artefato": {
+      "main": [
+        [
+          {
+            "node": "Montar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente LLM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
