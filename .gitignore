@@ -3,3 +3,10 @@
 *.data
 # IDE
 .vscode/
+# segredos e artefatos locais
+worker_token.txt
+.env
+backup/
+tasks/
+worker.log
+__pycache__/

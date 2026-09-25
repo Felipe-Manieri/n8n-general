@@ -1,0 +1,2914 @@
+{
+  "name": "GENERAL V10",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "9215eae0-51df-4b4d-b8cc-f11a727b0605",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -10144,
+        1488
+      ],
+      "webhookId": "general-v9",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst msg = item.message || {};\nconst chat_id = String(msg.chat?.id || '');\nconst user_id = Number(msg.from?.id || 0);\nconst update_id = Number(item.update_id || 0);\nconst message_id = Number(msg.message_id || 0);\nlet text = msg.text || '';\nlet has_voice = false;\nlet voice_file_id = '';\n\nif (msg.voice) { has_voice = true; voice_file_id = msg.voice.file_id; }\nelse if (msg.audio) { has_voice = true; voice_file_id = msg.audio.file_id; }\n\nreturn [{ json: { chat_id, user_id, update_id, message_id, text, has_voice, voice_file_id } }];"
+      },
+      "id": "9e4d08f5-0bcb-42dc-8233-b2935bda6fc3",
+      "name": "Padronizar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9920,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "sf1",
+              "leftValue": "={{ $json.user_id }}",
+              "rightValue": 6044282195,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "78135ba5-3e79-41e9-b16c-c06c4dc78860",
+      "name": "Só Felipe",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -9696,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "⛔ Acesso negado.",
+        "additionalFields": {}
+      },
+      "id": "5d8291aa-8ef7-491b-9636-ed6a7f7c9938",
+      "name": "Negar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9472,
+        1632
+      ],
+      "webhookId": "9cd40626-3fba-4ae2-92c7-5dd255ef1483",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS general_logs (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), chat_id TEXT, user_id BIGINT, canal TEXT, tipo TEXT, payload JSONB);\nCREATE TABLE IF NOT EXISTS general_pending (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), chat_id TEXT, user_id BIGINT, status TEXT DEFAULT 'PENDENTE', pedido TEXT, previa TEXT, acao JSONB);\nCREATE TABLE IF NOT EXISTS general_agentes (id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT NOW(), nome TEXT UNIQUE, objetivo TEXT, pode TEXT, nao_pode TEXT, ferramentas TEXT, prompt_sistema TEXT, ativo BOOLEAN DEFAULT TRUE);\nCREATE TABLE IF NOT EXISTS general_waiting_input (id SERIAL PRIMARY KEY, chat_id TEXT NOT NULL, id_tarefa TEXT NOT NULL, agent_name TEXT NOT NULL, input_type TEXT NOT NULL, prompt_pt TEXT NOT NULL, input_where_pt TEXT, payload JSONB, has_image BOOLEAN DEFAULT FALSE, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(chat_id, id_tarefa));\nCREATE TABLE IF NOT EXISTS telegram_updates (update_id BIGINT PRIMARY KEY, chat_id TEXT, message_id BIGINT, created_at TIMESTAMPTZ DEFAULT NOW());\nALTER TABLE general_waiting_input ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS status TEXT;\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS teste_ok BOOLEAN DEFAULT FALSE;\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS ultimo_teste TIMESTAMPTZ;\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS ultimo_erro TEXT;\nALTER TABLE general_agentes ADD COLUMN IF NOT EXISTS versao INT DEFAULT 1;\nUPDATE general_agentes SET status = CASE WHEN ativo THEN 'legado_nao_testado' ELSE 'pausado' END WHERE status IS NULL;\nALTER TABLE general_agentes ALTER COLUMN status SET DEFAULT 'rascunho';\nCREATE TABLE IF NOT EXISTS general_tasks (task_id TEXT PRIMARY KEY, chat_id TEXT, agent_name TEXT, tipo TEXT, destino TEXT, pedido TEXT, pendencia_id INT, state TEXT NOT NULL DEFAULT 'running', result_pt TEXT, evidence JSONB, erro TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());\nCREATE TABLE IF NOT EXISTS general_artifacts (id SERIAL PRIMARY KEY, task_id TEXT, agent_name TEXT, tipo TEXT, conteudo TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\nCREATE TABLE IF NOT EXISTS general_prefs (chat_id TEXT PRIMARY KEY, voz_auto BOOLEAN DEFAULT FALSE, updated_at TIMESTAMPTZ DEFAULT NOW());",
+        "options": {}
+      },
+      "id": "4b81ee0e-5256-4505-9bc2-daaab8f1ef94",
+      "name": "DB Init",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -9472,
+        1392
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO telegram_updates (update_id, chat_id, message_id) VALUES ({{ Number($('Padronizar').first().json.update_id || 0) }}, '{{ ($('Padronizar').first().json.chat_id || \"\").toString().replace(/'/g, \"''\") }}', {{ Number($('Padronizar').first().json.message_id || 0) }}) ON CONFLICT (update_id) DO NOTHING RETURNING update_id;",
+        "options": {}
+      },
+      "id": "216eb135-83b8-4ad0-a14b-00daf171b1be",
+      "name": "Deduplicar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -9248,
+        1392
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst has_id = rows.some(r => r.update_id != null && r.update_id !== '');\nif (!has_id) return [];\nconst pad = $('Padronizar').first().json;\nreturn [{ json: { ...pad, is_new: true } }];"
+      },
+      "id": "acef75a3-edf0-4335-bdb1-1bfb741a0a5a",
+      "name": "Novo?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9024,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "nw1",
+              "leftValue": "={{ $json.is_new }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b14117b2-d644-4191-9d76-e0265535fd80",
+      "name": "É Novo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -8800,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "vz1",
+              "leftValue": "={{ $json.has_voice }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "523d781e-d54c-4e01-95b0-5a06f9826eab",
+      "name": "Tem Voz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -8576,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.voice_file_id }}",
+        "additionalFields": {}
+      },
+      "id": "c910241b-42e6-43fe-8842-8023ecdbe41f",
+      "name": "Baixar Voz",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -8336,
+        1248
+      ],
+      "webhookId": "e5a1c9c5-54e7-4a6b-957b-d4d27c753399",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nif (item.binary) {\n  const keys = Object.keys(item.binary);\n  if (keys.length && keys[0] !== 'data') {\n    item.binary.data = item.binary[keys[0]];\n  }\n}\nreturn [item];"
+      },
+      "id": "6c5c4670-159a-497e-b425-b6018c02bb21",
+      "name": "Fix Binário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8112,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "0052378d-b51d-40d4-8389-0993beadcd0c",
+      "name": "Whisper",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -7888,
+        1248
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "26eON1fwGMrSnkGF",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pad = $('Padronizar').first().json;\nconst raw = $input.first().json;\nconst txt = (raw.text || raw.transcription || '').toString().trim();\nreturn [{ json: { ...pad, text: txt || 'Não entendi o áudio.', has_voice: false } }];"
+      },
+      "id": "6bc1273d-c6d3-403d-ac4a-ff8d61bf3429",
+      "name": "Setar Transcrição",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7664,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_logs (chat_id,user_id,canal,tipo,payload) VALUES ('{{ $json.chat_id }}',{{ $json.user_id ?? 0 }},'telegram','pedido',('{{ JSON.stringify({msg:$json.text}).replace(/'/g,\"''\") }}')::jsonb);",
+        "options": {}
+      },
+      "id": "35a47b69-6719-4ad9-9e66-67165d7745cd",
+      "name": "Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -7472,
+        1440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH g AS (DELETE FROM general_waiting_input WHERE chat_id='{{ $('Padronizar').first().json.chat_id }}' AND agent_name='General' RETURNING *)\nSELECT * FROM g\nUNION ALL\n(SELECT * FROM general_waiting_input WHERE chat_id='{{ $('Padronizar').first().json.chat_id }}' AND agent_name<>'General' ORDER BY id LIMIT 1);",
+        "options": {}
+      },
+      "id": "fd3e0a47-00c1-4ef8-bef1-e88657bd4e17",
+      "name": "Buscar Aguardando",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -7232,
+        1392
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pad = $('Padronizar').first().json;\nconst logItem = $('Log').first().json || {};\nlet textFromSetar = '';\ntry { const s = $('Setar Transcrição').first(); if (s?.json?.text != null) textFromSetar = String(s.json.text).trim(); } catch (e) {}\nconst text = textFromSetar !== '' ? textFromSetar : (logItem.text || pad.text || '');\nconst rows = $input.all().map(i => i.json).filter(r => r.id_tarefa);\nconst ext = rows.find(r => r.agent_name !== 'General');\nconst gen = rows.find(r => r.agent_name === 'General');\nif (ext) return [{ json: { chat_id: pad.chat_id, user_id: pad.user_id, text, has_waiting: true, waiting: ext } }];\n// Espera criada pelo próprio General: a resposta vira contexto da próxima conversa (a linha já foi consumida na query)\nconst t2 = gen ? ('Contexto: pedi ao Felipe (' + gen.input_type + '): \"' + gen.prompt_pt + '\". Resposta dele: ' + text) : text;\nreturn [{ json: { chat_id: pad.chat_id, user_id: pad.user_id, text: t2, has_waiting: false } }];"
+      },
+      "id": "bef4f257-71ed-4f81-a73f-c4a3b5df4994",
+      "name": "Tem Aguardando?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7008,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "hw1",
+              "leftValue": "={{ $json.has_waiting }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8e969781-b009-4a41-b79a-400ded7056fc",
+      "name": "Retomar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -6784,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const CFG = $('Config').first().json;\nconst d = $json;\nconst w = d.waiting || {};\nconst pl = w.payload || {};\nconst destino = pl.destino || 'central';\nconst task_id = 't' + Date.now() + '-r' + Math.random().toString(36).slice(2, 6);\nconst url = destino === 'worker' ? CFG.WORKER_URL + '/task' : (destino === 'executor' ? CFG.EXECUTOR_URL : CFG.CENTRAL_URL);\nreturn [{ json: { destino, url, body: { task_id: w.id_tarefa, resume_id: task_id, resume: true, user_input: d.text, payload: pl.original || {} },\n  chat_id: d.chat_id, user_id: d.user_id, task_id, agent_name: w.agent_name || 'Agente', tipo: 'retomar',\n  pedido: 'retomada de ' + w.id_tarefa, generate_audio: d.voz_auto === true, origem: 'retomada', pendencia_id: null } }];"
+      },
+      "id": "75adb7b2-d4fd-43f6-8aa2-1c757d392b33",
+      "name": "Montar Retomar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6560,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=DELETE FROM general_waiting_input WHERE chat_id='{{ $json.chat_id }}' AND id_tarefa='{{ ($json.body && $json.body.task_id) || '' }}';",
+        "options": {}
+      },
+      "id": "a9a4022f-609e-4401-ac3c-de32d5f4855a",
+      "name": "Apagar Aguardando",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2100,
+        2460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome,objetivo,pode,nao_pode,ferramentas,status,teste_ok FROM general_agentes WHERE status <> 'pausado' ORDER BY id;",
+        "options": {}
+      },
+      "id": "cace369d-32f6-4271-91c5-e03be80d1b7e",
+      "name": "Catálogo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -6560,
+        1584
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pad = $('Tem Aguardando?').first().json;\nconst agentes = $('Catálogo').all().map(i => i.json).filter(j => j.nome);\nconst pref = ($('Preferências').first() || {}).json || {};\nconst rot = { ativo: 'ATIVO e testado', aguardando_conexao: 'ATIVO e testado, mas a publicação/integração externa aguarda conexão', rascunho: 'RASCUNHO nunca testado (NÃO delegue)', em_teste: 'EM TESTE (NÃO delegue)', erro: 'COM ERRO no último teste (NÃO delegue)', legado_nao_testado: 'LEGADO: só cadastro, nunca testado (NÃO delegue; proponha testar)' };\nconst catalogo = agentes.length\n  ? agentes.map(a => '- ' + a.nome + ' [' + (rot[a.status] || a.status) + ']: ' + a.objetivo + ' | PODE: ' + a.pode + ' | NÃO PODE: ' + a.nao_pode + ' | FERRAMENTAS: ' + a.ferramentas).join('\\n')\n  : 'Nenhum agente criado. Pergunte se quer criar.';\nreturn [{ json: { catalogo, text: pad.text, chat_id: pad.chat_id, user_id: pad.user_id, voz_auto: pref.voz_auto === true } }];"
+      },
+      "id": "dbc6818c-ec22-4dd3-ab34-1795579f8a3b",
+      "name": "Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6336,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.texto || $json.text || $json.mensagem }}",
+        "options": {
+          "systemMessage": "=Você é o GENERAL — comandante e supervisor dos agentes de IA do Felipe. Você recebe ordens, escolhe quem executa, acompanha o estado e reporta o resultado VERDADEIRO. O sistema (não você) confirma a execução e anexa o resultado real; portanto NUNCA escreva que algo \"foi feito/executado/publicado\" — escreva no futuro ou como plano (\"vou pedir ao agente X...\").\n\nCATÁLOGO DE AGENTES (status entre colchetes; só delegue a agentes ATIVOS e testados):\n{{ $json.catalogo }}\n\nVocê SEMPRE responde em JSON válido e NADA fora dele:\n{\n  \"reply_text\": \"texto pro Felipe (plano/pergunta, nunca afirmação de conclusão)\",\n  \"action\": { \"type\": \"nome_da_acao\", \"payload\": {} } ou null,\n  \"need_approval\": false,\n  \"approval_preview\": \"descrição clara do que será feito, se need_approval\",\n  \"need_user_input\": { \"input_type\": \"otp\"|\"password\"|\"captcha\"|\"confirm\", \"prompt_pt\": \"texto pedindo\", \"input_where_pt\": \"SMS\"|\"email\"|\"app\"|\"WhatsApp\", \"has_image\": false, \"payload\": {} } ou null,\n  \"generate_audio\": false\n}\n\nACTIONS (type) — UMA ação por resposta:\nExecução (passam pelo contrato task_id/status/evidência):\n- executar_pc → {command, verify?} — PowerShell no PC. SEMPRE que possível inclua verify: lista de checagens do efeito, ex. [{\"type\":\"file_exists\",\"path\":\"C:\\\\...\"}], tipos: file_exists, dir_exists, path_absent, file_contains{text}, file_sha256{sha256}\n- criar_arquivo_pc → {path, content} — cria arquivo dentro do perfil do usuário (o Worker confere de volta)\n- openclaw → {url, instructions} — RPA no navegador via Central\n- executar_agente → {nome, acao, tarefa} — delega a um agente ATIVO. acao: \"preparar_conteudo\" (padrão) ou ações sensíveis como \"publicar_...\" (exigem aprovação e conexão)\n- testar_agente → {nome} — roda a tarefa de teste do agente\nAdministração de agentes (SQL interno):\n- criar_agente → {nome, objetivo, pode, nao_pode, ferramentas, prompt_sistema, conexoes_necessarias:[...], acoes_requerem_conexao:[...], tarefa_teste}\n- editar_agente → mesmos campos (volta a RASCUNHO até novo teste)\n- pausar_agente → {nome} | reativar_agente → {nome}\n- marcar_conexao_pronta → {nome, conexao} — só depois que o Felipe disser que configurou a credencial no n8n; em seguida proponha testar_agente\n- status_agentes → {} | ver_erros_agente → {nome} | consultar_tarefa → {task_id?}\n- consultar_sql → {query} — SOMENTE SELECT (tabelas general_*)\n- aprovar_pendencia → {id} | cancelar_pendencia → {id}\n- definir_preferencia_voz → {ativo: true|false}\n\nREGRAS:\n1) Felipe fala linguagem natural. Sem comandos com /.\n2) Ações perigosas (postar/publicar, pagar, apagar, enviar em massa, executar_pc, criar_arquivo_pc, openclaw): need_approval=true + approval_preview. Cada aprovação vale só para a ação mostrada.\n3) Se a mensagem contém CONFIRMO ALFA: execute direto, need_approval=false (vale só para esta mensagem).\n4) CRIAR AGENTE — pergunte 1 por vez: nome → objetivo → tarefas permitidas → limites (não pode) → ferramentas/conexões externas necessárias (ex.: Instagram exige conexão) → tarefa de teste. Só use criar_agente com TUDO definido. Depois de criar, diga que é RASCUNHO e proponha testar_agente. Nunca diga que o agente está funcionando antes do teste passar. Se faltar conexão, explique o passo (configurar a credencial no n8n, nunca enviar senha/token pelo chat) e aguarde.\n5) Trava (2FA/senha/captcha): use need_user_input. Informe em input_where_pt onde o código chega. NUNCA peça senha completa ou token pelo chat.\n6) Áudio: se Felipe pedir (\"responda em voz\", \"manda áudio\", \"estou dirigindo\"), generate_audio=true. Se pedir para lembrar da preferência, use definir_preferencia_voz.\n7) Status/relatório/agentes/tarefas: use status_agentes, consultar_tarefa ou consultar_sql.\n8) Aprovar/cancelar: \"aprovar 5\" → aprovar_pendencia {id:5}.\n9) Seja direto. Delegue a agentes ATIVOS quando o catálogo tiver um adequado; se não houver, proponha criar um."
+        }
+      },
+      "id": "08f69093-5e18-476f-8276-7f7899631509",
+      "name": "General",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -6112,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "01585d85-ecea-4f95-9b2a-b7a65d8c248c",
+      "name": "Modelo",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -6112,
+        1808
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "26eON1fwGMrSnkGF",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.chat_id }}",
+        "contextWindowLength": 30
+      },
+      "id": "369d7ff8-b74e-4e65-880b-f90fda61d699",
+      "name": "Memória",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -5984,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nlet content = '';\nif (typeof raw.output === 'string') content = raw.output;\nelse if (raw.output && typeof raw.output === 'object') content = JSON.stringify(raw.output);\nelse content = raw.content || raw.text || JSON.stringify(raw);\n\nlet p = {};\ntry { const m = content.match(/\\{[\\s\\S]*\\}/); if (m) p = JSON.parse(m[0]); } catch (e) { p = {}; }\n\nif (!p.reply_text) p.reply_text = content;\nif (typeof p.action === 'string') p.action = { type: p.action, payload: {} };\nif (!p.action || !p.action.type) p.action = null;\np.need_approval = p.need_approval === true;\nif (!p.need_user_input) p.need_user_input = null;\n\nconst ctx = $('Contexto').first().json;\nconst t = String(ctx.text || '');\nif (t.toUpperCase().includes('CONFIRMO ALFA')) p.need_approval = false;\n\n// Voz: só quando o Felipe pedir (ou tiver definido a preferência). Áudio recebido NÃO liga a voz sozinho.\nconst pediuVoz = /(respond[ae]|mand[ae]|envi[ae]|fal[ae]|quero|prefiro)\\b[^.!?\\n]{0,40}(?:\\s|^)(?:em\\s+)?(?:voz|[áa]udio)|\\b(por|em)\\s+(voz|[áa]udio)\\b|estou\\s+dirigindo/i.test(t);\nconst pediuTexto = /\\b(sem|pare de|parar de|volte? (a|para) )[^.!?\\n]{0,25}(voz|[áa]udio|texto)/i.test(t);\np.generate_audio = pediuTexto ? false : (p.generate_audio === true || pediuVoz || ctx.voz_auto === true);\n\nreturn [{ json: { ...ctx, ...p, chat_id: ctx.chat_id, user_id: ctx.user_id, acao: p.action } }];"
+      },
+      "id": "9f69e8f1-afa0-4441-9556-754e15da77e5",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5760,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nconst perigosas = ['executar_pc', 'criar_arquivo_pc', 'openclaw'];\nconst internas = ['criar_agente', 'editar_agente', 'aprovar_pendencia', 'cancelar_pendencia', 'consultar_sql', 'pausar_agente', 'reativar_agente', 'status_agentes', 'ver_erros_agente', 'marcar_conexao_pronta', 'consultar_tarefa', 'definir_preferencia_voz', 'testar_agente'];\nconst acao = prev.action || prev.acao;\nconst tipo = (acao?.type || acao?.tipo || '').toString().toLowerCase();\nconst pl = acao?.payload || {};\nconst sensivel = tipo === 'executar_agente' && (/^(publicar|postar|apagar|deletar|excluir|pagar|enviar_massa)/i.test(String(pl.acao || '')) || pl.sensivel === true);\nconst confirmoAlfa = String(prev.text || '').toUpperCase().includes('CONFIRMO ALFA');\nlet need_approval = prev.need_approval;\nif (tipo && (perigosas.includes(tipo) || sensivel)) need_approval = true;\nif (tipo && internas.includes(tipo)) need_approval = false;   // administração interna nunca vira pendência de execução externa\nif (confirmoAlfa) need_approval = false;                      // vale só para esta mensagem\nreturn [{ json: { ...prev, need_approval } }];"
+      },
+      "id": "a9940ae8-b54d-4fbe-a640-876c839920f7",
+      "name": "Forçar Aprovação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5536,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $input.first().json;\nlet rota = 0;\nif (g.need_user_input) rota = 3;\nelse if (g.need_approval && (g.action || g.acao)) rota = 1;\nelse if ((g.action || g.acao) && !g.need_approval) rota = 2;\nreturn [{ json: { ...g, rota } }];"
+      },
+      "id": "228b4a16-9ceb-46f6-a2fa-d37d29a1faef",
+      "name": "Decidir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5312,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Responder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Aprovar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Executar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PedirInput"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false
+        }
+      },
+      "id": "0621a3c3-66e2-4ab4-8da6-2607f57e157b",
+      "name": "Rota",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -5088,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ga1",
+              "leftValue": "={{ $json.generate_audio === true }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d5a38958-e2b3-430e-9921-62b3aad37c47",
+      "name": "Áudio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4864,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ String($json.reply_text || '').slice(0, 4000) }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f588f4cb-c8ad-42d6-bd36-048ce8a05877",
+      "name": "Enviar Texto",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -4640,
+        1104
+      ],
+      "webhookId": "47ca21d6-2bdd-4dac-a236-425cbedc943c",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/Zk0wRqIFBWGMu2lIk7hw",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ text: String($json.reply_text || ' ').slice(0, 2500), model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "a4d1b17d-593c-4cf6-a930-446da8c6e02d",
+      "name": "ElevenLabs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4640,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "ElevenLabs (xi-api-key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Áudio?').first().json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "f7605120-9370-477b-b404-f5c3cef2a589",
+      "name": "Enviar Áudio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -4416,
+        912
+      ],
+      "webhookId": "f33da54c-1a09-45c4-944d-a85d580bd2e9",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nconst esc = s => String(s ?? '').replace(/'/g, \"''\");\nconst acao = prev.action || prev.acao || {};\nconst task_id = 't' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\nconst acaoFull = { ...acao, meta: { task_id, generate_audio: prev.generate_audio === true } };\nreturn [{ json: { ...prev, task_id, pedido_esc: esc(prev.text || prev.reply_text), previa_esc: esc(prev.approval_preview || prev.reply_text), acao_json: JSON.stringify(acaoFull).replace(/'/g, \"''\") } }];"
+      },
+      "id": "81fc3938-5d34-4ec0-a2b2-619a753f2b5e",
+      "name": "Prep Pendência",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4864,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_pending (chat_id,user_id,status,pedido,previa,acao) VALUES ('{{ $json.chat_id }}',{{ $json.user_id ?? 0 }},'PENDENTE','{{ $json.pedido_esc }}','{{ $json.previa_esc }}',('{{ $json.acao_json }}')::jsonb) RETURNING id;",
+        "options": {}
+      },
+      "id": "0df3ecda-c0b3-4aee-a4da-bf662bae2d1d",
+      "name": "Criar Pendência",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -4640,
+        1296
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst id = row.id;\nconst prev = $('Prep Pendência').first().json;\nconst previa = String(prev.approval_preview || prev.reply_text || '(sem descrição)');\nconst txt = '👀 PRÉVIA #' + id + '\\n\\n' + previa + '\\n\\n✅ Para aprovar: \"aprovar ' + id + '\"\\n❌ Para cancelar: \"cancelar ' + id + '\"\\n🔎 A aprovação vale só para esta ação.';\nreturn [{ json: { ...prev, txt, reply_text: txt, chat_id: prev.chat_id } }];"
+      },
+      "id": "e15d4414-2386-4047-9ad4-32746f728dac",
+      "name": "Formatar Prévia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4416,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d4fd75b2-b8a8-4d31-93bb-5e1e40a6c3a1",
+      "name": "Enviar Prévia",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -4192,
+        1296
+      ],
+      "webhookId": "ddf3b1c1-8044-492c-8c4d-860e818430fb",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nconst action = e.action || e.acao || {};\nconst tipo = (action.type || '').toLowerCase();\nconst payload = action.payload || {};\nconst externas = ['executar_pc', 'criar_arquivo_pc', 'openclaw', 'executar_agente', 'testar_agente'];\nconst task_id = 't' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\nlet agent_name = tipo;\nif (tipo === 'openclaw') agent_name = 'OpenClaw';\nelse if (tipo === 'executar_pc' || tipo === 'criar_arquivo_pc') agent_name = 'PC';\nelse if (tipo === 'executar_agente' || tipo === 'testar_agente') agent_name = String(payload.nome || 'agente');\nreturn [{ json: { ...e, tipo, payload, task_id, agent_name, exec_type: externas.includes(tipo) ? 'external' : 'internal' } }];"
+      },
+      "id": "026e746a-d61b-43ed-9b87-1b320398ecfd",
+      "name": "Classificar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4864,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ex1",
+              "leftValue": "={{ $json.exec_type }}",
+              "rightValue": "external",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "07953d25-2a7b-4601-8008-1eb23e3e1f8c",
+      "name": "Externo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4640,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Monta a chamada conforme o destino. Tokens NÃO ficam aqui: a autenticação é feita pela credencial do nó HTTP.\nfunction buildCall(tipo, p, task_id, CFG) {\n  p = p || {};\n  if (tipo === 'executar_pc') return { destino: 'worker', url: CFG.WORKER_URL + '/task',\n    body: { task_id, action: 'powershell', command: String(p.command || ''), verify: Array.isArray(p.verify) ? p.verify : [], timeout_s: 60, wait_s: 25 } };\n  if (tipo === 'criar_arquivo_pc') return { destino: 'worker', url: CFG.WORKER_URL + '/task',\n    body: { task_id, action: 'create_file', path: String(p.path || ''), content: String(p.content || '') } };\n  if (tipo === 'openclaw') return { destino: 'central', url: CFG.CENTRAL_URL,\n    body: { task: ['Abra ' + (p.url || '') + '.', p.instructions || ''].filter(Boolean).join(' '), task_id } };\n  if (tipo === 'executar_agente' || tipo === 'testar_agente') return { destino: 'executor', url: CFG.EXECUTOR_URL,\n    body: { task_id, agent: String(p.nome || ''), acao: tipo === 'testar_agente' ? 'teste' : String(p.acao || 'preparar_conteudo'), tarefa: String(p.tarefa || '') } };\n  return { destino: 'invalido', url: '', body: {} };\n}\n\nconst CFG = $('Config').first().json;\nconst e = $input.first().json;\nconst call = buildCall(e.tipo, e.payload, e.task_id, CFG);\nreturn [{ json: { ...call, chat_id: e.chat_id, user_id: e.user_id, task_id: e.task_id, agent_name: e.agent_name, tipo: e.tipo,\n  pedido: e.text || '', generate_audio: e.generate_audio === true, origem: 'direto', pendencia_id: null } }];"
+      },
+      "id": "433b0ba2-4fc5-4905-bd7b-c4d5d303efd6",
+      "name": "Montar Endpoint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4416,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ni1",
+              "leftValue": "={{ $json.need_input }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d95a13d0-9b9f-4c93-9cfc-d4906f375877",
+      "name": "Precisa Input?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3744,
+        1568
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_waiting_input (chat_id,id_tarefa,agent_name,input_type,prompt_pt,payload,has_image) VALUES ('{{ $json.chat_id }}','{{ $json.task_id }}','{{ String($json.agent_name || 'Agente').replace(/'/g, \"''\") }}','{{ $json.input_type || 'otp' }}','{{ String($json.prompt_pt || $json.result_pt || 'Preciso de uma resposta sua.').replace(/'/g, \"''\") }}',('{{ JSON.stringify({ destino: $json.destino, original: $json.body, agente: $json.payload_in || {} }).replace(/'/g, \"''\") }}')::jsonb,{{ $json.has_image === true ? 'TRUE' : 'FALSE' }}) ON CONFLICT (chat_id,id_tarefa) DO NOTHING;",
+        "options": {}
+      },
+      "id": "db7d057e-8cb5-4e2d-bda6-9ca1ac1a53f3",
+      "name": "Salvar Aguardando",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -3520,
+        1472
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Estado Final').first().json;\nconst nome = prev.agent_name || 'Agente';\nconst prompt = prev.prompt_pt || prev.result_pt || 'Me envie o código aqui.';\nconst tipo = (prev.input_type || 'otp').toLowerCase();\nconst extra = tipo === 'captcha' ? ' Resolva e responda OK.' : '';\nconst txt = '[' + nome + ' • tarefa ' + prev.task_id + '] ' + prompt + extra;\nreturn [{ json: { ...prev, txt, chat_id: prev.chat_id } }];"
+      },
+      "id": "f0e5016e-2e43-4cac-b769-e978cfa6b55a",
+      "name": "Msg Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3296,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "066e0faf-7752-4e62-baf2-837a1b37645c",
+      "name": "Enviar Pedido Input",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -3072,
+        1472
+      ],
+      "webhookId": "80b9a6a5-d235-4d3f-b6e8-c1b1c420fa20",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction buildMsg(s) {\n  const nome = s.agent_name ? '[' + s.agent_name + '] ' : '';\n  const ev = s.evidence || {};\n  const lines = (Array.isArray(ev.checks) ? ev.checks : []).slice(0, 4)\n    .map(c => (c.ok ? '✔ ' : '✘ ') + (c.type || '') + (c.path ? ': ' + c.path : '') + (c.id ? ' #' + c.id : ''));\n  let head;\n  if (s.state === 'completed' && s.verified) head = '✅ Executado e verificado.';\n  else if (s.state === 'completed') head = '⚠️ Concluído, mas SEM verificação independente do efeito. Não posso afirmar que a ação aconteceu.';\n  else if (s.state === 'running') head = '⏳ Em andamento. Vou acompanhar e aviso quando terminar (peça: \"status da tarefa ' + s.task_id + '\").';\n  else if (s.state === 'failed') head = '❌ Falhou: ' + (s.reason || 'sem detalhe');\n  else head = '❓ Resultado desconhecido: não confirmei que a tarefa foi executada. Motivo: ' + (s.reason || 'sem detalhe');\n  let txt = nome + head;\n  if (s.result_pt) txt += '\\n' + s.result_pt;\n  if (lines.length) txt += '\\n' + lines.join('\\n');\n  if (s.agente_status) txt += '\\nStatus do agente: ' + s.agente_status.status + (s.agente_status.pendentes && s.agente_status.pendentes.length ? ' (conexões pendentes: ' + s.agente_status.pendentes.join(', ') + ')' : '');\n  txt += '\\nTarefa: ' + s.task_id + (s.origem === 'aprovacao' ? ' (ação da pendência #' + (s.pendencia_id || '?') + ')' : '');\n  return txt;\n}\n\nconst s = $input.first().json;\nreturn [{ json: { ...s, reply_text: buildMsg(s) } }];"
+      },
+      "id": "9dd3efd1-fff5-47b1-a923-2155c9db960d",
+      "name": "Resultado OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3520,
+        1664
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_logs (chat_id,user_id,canal,tipo,payload) VALUES ('{{ $json.chat_id }}',{{ $json.user_id ?? 0 }},'telegram','execucao',('{{ JSON.stringify({ task_id: $json.task_id, agente: $json.agent_name, destino: $json.destino, state: $json.state, verified: $json.verified === true, origem: $json.origem }).replace(/'/g, \"''\") }}')::jsonb);",
+        "options": {}
+      },
+      "id": "9284700e-986e-4a53-990c-b91ec5daad93",
+      "name": "Log Exec",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -3296,
+        1664
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nconst tipo = e.tipo;\nconst p = e.payload || {};\nconst esc = s => String(s ?? '').replace(/'/g, \"''\");\nconst nomeOk = /^[\\wÀ-ÿ\\- ]{2,40}$/.test(String(p.nome || ''));\nconst nome = esc(p.nome);\nlet sql = 'SELECT 1;', extra = '', reexecutar = false, mutates = false, lista = false, notfound = '';\nconst arr = v => Array.isArray(v) ? v.map(String) : [];\nswitch (tipo) {\n  case 'criar_agente': {\n    if (!nomeOk || !p.objetivo) { extra = '⚠️ Preciso de nome (2–40 letras) e objetivo para cadastrar o agente.'; break; }\n    const cfg = { conexoes_necessarias: arr(p.conexoes_necessarias), conexoes_ok: [], conexoes_pendentes: arr(p.conexoes_necessarias),\n      acoes_requerem_conexao: arr(p.acoes_requerem_conexao), tarefa_teste: String(p.tarefa_teste || '') };\n    sql = \"INSERT INTO general_agentes (nome,objetivo,pode,nao_pode,ferramentas,prompt_sistema,ativo,status,teste_ok,config) VALUES ('\" + nome + \"','\" + esc(p.objetivo) + \"','\" + esc(p.pode) + \"','\" + esc(p.nao_pode) + \"','\" + esc(p.ferramentas) + \"','\" + esc(p.prompt_sistema) + \"',TRUE,'rascunho',FALSE,'\" + esc(JSON.stringify(cfg)) + \"'::jsonb) ON CONFLICT (nome) DO UPDATE SET objetivo=EXCLUDED.objetivo,pode=EXCLUDED.pode,nao_pode=EXCLUDED.nao_pode,ferramentas=EXCLUDED.ferramentas,prompt_sistema=EXCLUDED.prompt_sistema,config=EXCLUDED.config,ativo=TRUE,status='rascunho',teste_ok=FALSE,versao=general_agentes.versao+1 RETURNING id,nome,status;\";\n    extra = '📝 Agente \"' + p.nome + '\" cadastrado como RASCUNHO. Isso ainda NÃO é um agente funcional: falta o teste.' + (cfg.conexoes_necessarias.length ? ' Conexões necessárias: ' + cfg.conexoes_necessarias.join(', ') + '.' : '') + ' Diga \"testar agente ' + p.nome + '\" para validar.';\n    mutates = true; notfound = 'não consegui gravar o agente.'; break; }\n  case 'editar_agente':\n    if (!nomeOk) { extra = '⚠️ Informe o nome do agente a editar.'; break; }\n    sql = \"UPDATE general_agentes SET objetivo=COALESCE(NULLIF('\" + esc(p.objetivo) + \"',''),objetivo),pode=COALESCE(NULLIF('\" + esc(p.pode) + \"',''),pode),nao_pode=COALESCE(NULLIF('\" + esc(p.nao_pode) + \"',''),nao_pode),ferramentas=COALESCE(NULLIF('\" + esc(p.ferramentas) + \"',''),ferramentas),prompt_sistema=COALESCE(NULLIF('\" + esc(p.prompt_sistema) + \"',''),prompt_sistema),status='rascunho',teste_ok=FALSE,versao=versao+1 WHERE nome='\" + nome + \"' RETURNING id,nome,status;\";\n    extra = '✏️ Agente \"' + p.nome + '\" editado. Volta a RASCUNHO até um novo teste (\"testar agente ' + p.nome + '\").';\n    mutates = true; notfound = 'agente \"' + p.nome + '\" não encontrado.'; break;\n  case 'pausar_agente':\n    sql = \"UPDATE general_agentes SET config=jsonb_set(COALESCE(config,'{}'::jsonb),'{status_pre_pausa}',to_jsonb(status)),status='pausado',ativo=FALSE WHERE nome='\" + nome + \"' AND status<>'pausado' RETURNING nome,status;\";\n    extra = '⏸️ Agente \"' + p.nome + '\" pausado.'; mutates = true; notfound = 'agente \"' + p.nome + '\" não encontrado ou já pausado.'; break;\n  case 'reativar_agente':\n    sql = \"UPDATE general_agentes SET status=CASE WHEN teste_ok THEN COALESCE(NULLIF(config->>'status_pre_pausa','pausado'),'ativo') ELSE 'rascunho' END,ativo=TRUE WHERE nome='\" + nome + \"' AND status='pausado' RETURNING nome,status;\";\n    extra = '▶️ Agente \"' + p.nome + '\" reativado (se nunca passou em teste, volta como RASCUNHO).'; mutates = true; notfound = 'agente \"' + p.nome + '\" não encontrado ou não estava pausado.'; break;\n  case 'marcar_conexao_pronta':\n    sql = \"UPDATE general_agentes SET config=jsonb_set(COALESCE(config,'{}'::jsonb),'{conexoes_ok}',COALESCE(config->'conexoes_ok','[]'::jsonb) || to_jsonb('\" + esc(p.conexao) + \"'::text)),status='rascunho',teste_ok=FALSE WHERE nome='\" + nome + \"' RETURNING nome,status;\";\n    extra = '🔌 Registrei a conexão \"' + p.conexao + '\" como pronta, mas ainda NÃO está verificada. Rode \"testar agente ' + p.nome + '\" para confirmar.';\n    mutates = true; notfound = 'agente \"' + p.nome + '\" não encontrado.'; break;\n  case 'status_agentes':\n    sql = \"SELECT nome,status,teste_ok,to_char(ultimo_teste,'DD/MM HH24:MI') AS ultimo_teste,ultimo_erro,versao FROM general_agentes ORDER BY id;\"; lista = true; extra = '🪖 Agentes:'; break;\n  case 'ver_erros_agente':\n    sql = \"SELECT task_id,state,erro,to_char(updated_at,'DD/MM HH24:MI') AS quando FROM general_tasks WHERE agent_name='\" + nome + \"' AND state IN ('failed','unknown') ORDER BY updated_at DESC LIMIT 5;\"; lista = true; extra = '🚨 Últimos erros de ' + (p.nome || '?') + ':'; break;\n  case 'consultar_tarefa':\n    sql = \"SELECT task_id,agent_name,state,result_pt,erro,to_char(updated_at,'DD/MM HH24:MI') AS quando FROM general_tasks WHERE chat_id='\" + esc(e.chat_id) + \"' AND ('\" + esc(p.task_id) + \"'='' OR task_id='\" + esc(p.task_id) + \"') ORDER BY created_at DESC LIMIT 5;\"; lista = true; extra = '📋 Tarefas:'; break;\n  case 'definir_preferencia_voz': {\n    const on = p.ativo === true;\n    sql = \"INSERT INTO general_prefs (chat_id,voz_auto) VALUES ('\" + esc(e.chat_id) + \"',\" + (on ? 'TRUE' : 'FALSE') + \") ON CONFLICT (chat_id) DO UPDATE SET voz_auto=EXCLUDED.voz_auto,updated_at=NOW() RETURNING voz_auto;\";\n    extra = on ? '🔊 Passo a responder sempre em voz (diga \"sem áudio\" para voltar ao texto).' : '💬 Voltei a responder em texto, exceto quando você pedir voz.';\n    mutates = true; notfound = 'não consegui salvar a preferência.'; break; }\n  case 'aprovar_pendencia':\n    sql = \"UPDATE general_pending SET status='APROVADO' WHERE id=\" + Number(p.id || 0) + \" AND chat_id='\" + esc(e.chat_id) + \"' AND status='PENDENTE' RETURNING id,acao;\";\n    extra = '✅ Pendência #' + p.id + ' aprovada.'; reexecutar = true; mutates = true;\n    notfound = 'pendência #' + p.id + ' não está pendente (já processada, cancelada ou inexistente). Nada foi executado.'; break;\n  case 'cancelar_pendencia':\n    sql = \"UPDATE general_pending SET status='CANCELADO' WHERE id=\" + Number(p.id || 0) + \" AND chat_id='\" + esc(e.chat_id) + \"' AND status='PENDENTE' RETURNING id;\";\n    extra = '❌ Pendência #' + p.id + ' cancelada.'; mutates = true; notfound = 'pendência #' + p.id + ' não está pendente.'; break;\n  case 'consultar_sql': {\n    const q = String(p.query || '').trim().replace(/;+\\s*$/, '');\n    if (!/^select\\b/i.test(q) || q.includes(';') || /\\b(pg_sleep|pg_read_file|pg_ls_dir|lo_import|dblink|copy)\\b/i.test(q)) { extra = '⚠️ Só consultas SELECT simples são permitidas.'; break; }\n    sql = 'SELECT * FROM (' + q + ') AS _q LIMIT 50;'; lista = true; extra = '📊 Resultado:'; break; }\n  default:\n    extra = '⚠️ Ação não reconhecida: ' + tipo + '. Nada foi executado.';\n}\nreturn [{ json: { ...e, sql, extra, reply_text: e.reply_text, chat_id: e.chat_id, user_id: e.user_id, tipo, reexecutar, mutates, lista, notfound } }];"
+      },
+      "id": "cc90ed34-7875-443a-a719-cd5d99004696",
+      "name": "Montar SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4416,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "7377d83b-fe36-4f59-8439-0478f738cf6a",
+      "name": "Executar SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -4192,
+        1952
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r && Object.keys(r).length > 0 && !(Object.keys(r).length === 1 && 'success' in r));\nconst prev = $('Montar SQL').first().json;\nlet reply = prev.extra || prev.reply_text || '';\nlet reexecutar = false, acao = null, tipo = prev.tipo, pendencia_id = null;\n\nif (prev.mutates && rows.length === 0) {\n  reply = '⚠️ Nada foi alterado: ' + (prev.notfound || 'registro não encontrado') + ' Não confirmo a operação.';\n} else if (prev.reexecutar && rows[0] && rows[0].acao) {\n  try {\n    acao = typeof rows[0].acao === 'string' ? JSON.parse(rows[0].acao) : rows[0].acao;\n    tipo = acao.type || acao.tipo || null;\n    pendencia_id = rows[0].id;\n    reexecutar = !!tipo;\n    reply += '\\n⏳ Executando a ação aprovada (acompanhe o resultado abaixo).';\n  } catch (e) { reply = '⚠️ A pendência aprovada tem uma ação ilegível; nada foi executado.'; }\n}\nif (prev.lista) {\n  reply += rows.length ? '\\n' + rows.map(r => Object.entries(r).map(([k, v]) => k + '=' + (v === null ? '-' : (typeof v === 'object' ? JSON.stringify(v) : v))).join(' | ')).join('\\n').slice(0, 3000) : '\\n(sem resultados)';\n}\nreturn [{ json: { ...prev, reply_text: reply, reexecutar, acao, tipo, pendencia_id } }];"
+      },
+      "id": "828bd8fc-c508-4561-82d8-c497930606c6",
+      "name": "Resultado SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3968,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = $input.first().json;\nconst inp = g.need_user_input || {};\nconst task_id = 't' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\nconst agent_name = 'General';\nconst input_type = ['otp', 'password', 'captcha', 'confirm'].includes(inp.input_type) ? inp.input_type : 'otp';\nconst prompt_pt = inp.prompt_pt || g.reply_text || 'Me envie o código aqui.';\nconst has_image = inp.has_image === true;\nreturn [{ json: { chat_id: g.chat_id, task_id, agent_name, input_type, prompt_pt, has_image, payload: inp.payload || {}, reply_text: g.reply_text } }];"
+      },
+      "id": "7cb8cf74-e939-451b-afdc-81215cda9569",
+      "name": "Prep Input General",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4864,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_waiting_input (chat_id,id_tarefa,agent_name,input_type,prompt_pt,payload,has_image) VALUES ('{{ $json.chat_id }}','{{ $json.task_id }}','General','{{ $json.input_type }}','{{ String($json.prompt_pt || '').replace(/'/g, \"''\") }}',('{{ JSON.stringify($json.payload || {}).replace(/'/g, \"''\") }}')::jsonb,{{ $json.has_image ? 'TRUE' : 'FALSE' }}) ON CONFLICT (chat_id,id_tarefa) DO NOTHING;",
+        "options": {}
+      },
+      "id": "91de886a-aeed-48f7-a27f-e6281f14272e",
+      "name": "Salvar Input General",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -4640,
+        2144
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Prep Input General').first().json;\nconst tipo = (prev.input_type || 'otp').toLowerCase();\nlet extra = '';\nif (tipo === 'captcha') extra = ' Resolva e responda OK.';\nconst txt = '[' + prev.agent_name + ' • tarefa ' + prev.task_id + '] ' + prev.prompt_pt + extra;\nreturn [{ json: { ...prev, txt, chat_id: prev.chat_id } }];"
+      },
+      "id": "0351ea56-c05b-4d0c-b5d1-da37407bc645",
+      "name": "Msg Input General",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4416,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.txt }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a365c413-29d1-4d30-a17d-050d23c99d0e",
+      "name": "Enviar Input General",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -4192,
+        2144
+      ],
+      "webhookId": "0395236f-4f2d-40d1-b7cd-484f573ceb33",
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "re1",
+              "leftValue": "={{ $json.reexecutar }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a571a97a-f24b-4619-bde3-327849c05295",
+      "name": "Reexecutar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3744,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Monta a chamada conforme o destino. Tokens NÃO ficam aqui: a autenticação é feita pela credencial do nó HTTP.\nfunction buildCall(tipo, p, task_id, CFG) {\n  p = p || {};\n  if (tipo === 'executar_pc') return { destino: 'worker', url: CFG.WORKER_URL + '/task',\n    body: { task_id, action: 'powershell', command: String(p.command || ''), verify: Array.isArray(p.verify) ? p.verify : [], timeout_s: 60, wait_s: 25 } };\n  if (tipo === 'criar_arquivo_pc') return { destino: 'worker', url: CFG.WORKER_URL + '/task',\n    body: { task_id, action: 'create_file', path: String(p.path || ''), content: String(p.content || '') } };\n  if (tipo === 'openclaw') return { destino: 'central', url: CFG.CENTRAL_URL,\n    body: { task: ['Abra ' + (p.url || '') + '.', p.instructions || ''].filter(Boolean).join(' '), task_id } };\n  if (tipo === 'executar_agente' || tipo === 'testar_agente') return { destino: 'executor', url: CFG.EXECUTOR_URL,\n    body: { task_id, agent: String(p.nome || ''), acao: tipo === 'testar_agente' ? 'teste' : String(p.acao || 'preparar_conteudo'), tarefa: String(p.tarefa || '') } };\n  return { destino: 'invalido', url: '', body: {} };\n}\n\n// Executa EXATAMENTE a ação gravada na pendência aprovada (não a que o modelo diria agora).\nconst CFG = $('Config').first().json;\nconst e = $input.first().json;\nconst acao = e.acao || {};\nconst tipo = String(acao.type || acao.tipo || '').toLowerCase();\nconst meta = acao.meta || {};\nconst task_id = meta.task_id || ('t' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));\nlet agent_name = tipo;\nif (tipo === 'openclaw') agent_name = 'OpenClaw';\nelse if (tipo === 'executar_pc' || tipo === 'criar_arquivo_pc') agent_name = 'PC';\nelse if (tipo === 'executar_agente' || tipo === 'testar_agente') agent_name = String((acao.payload || {}).nome || 'agente');\nconst call = buildCall(tipo, acao.payload || {}, task_id, CFG);\nreturn [{ json: { ...call, chat_id: e.chat_id, user_id: e.user_id, task_id, agent_name, tipo,\n  pedido: 'pendência aprovada #' + (e.pendencia_id || '?'), generate_audio: e.generate_audio === true || meta.generate_audio === true,\n  origem: 'aprovacao', pendencia_id: e.pendencia_id || null } }];"
+      },
+      "id": "a988c96c-4d18-4373-8e59-d6b2ad72b720",
+      "name": "Prep Reexecução",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3520,
+        1856
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const i = $input.first().json;\nif (i.is_error) return $input.all();\nreturn [];"
+      },
+      "id": "3b55891a-f8d4-45a0-bcf5-ad189fe281d5",
+      "name": "Só Erros?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2848,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_logs (chat_id, user_id, canal, tipo, payload) VALUES ('{{ $json.chat_id }}', {{ $json.user_id || 0 }}, 'telegram', 'erro', ('{{ JSON.stringify({ task_id: $json.task_id, state: $json.state, destino: $json.destino, reason: $json.reason || '' }).replace(/'/g, \"''\") }}')::jsonb);",
+        "options": {}
+      },
+      "id": "5ca7212a-1023-4d92-8899-0e783a0e8609",
+      "name": "Log Erro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2624,
+        1424
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// URLs NÃO secretas. Ajuste aqui se o endereço mudar. Tokens ficam nas credenciais do n8n.\nreturn [{ json: { ...$input.first().json,\n  CENTRAL_URL: 'http://72.60.11.239:8080/task',\n  WORKER_URL: 'http://100.107.36.118:8787',\n  EXECUTOR_URL: 'http://localhost:5678/webhook/agente-executor'\n} }];"
+      },
+      "id": "85bf8fa3-1c4d-5d8b-8267-c0feee26ff6f",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT voz_auto FROM general_prefs WHERE chat_id='{{ $('Padronizar').first().json.chat_id }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "71bd0237-8f58-5503-97f3-9c98bb1c7dd8",
+      "name": "Preferências",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -6400,
+        1724
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "069770fb-e955-5b32-bbc0-1e4822347b8b",
+              "leftValue": "={{ ($binary && $binary.data) ? true : false }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "720e685b-79e6-5dba-a287-a993c95a2e54",
+      "name": "Áudio OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4400,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A voz falhou: responde em TEXTO e registra o erro.\nconst o = $('Áudio?').first().json;\nconst err = $input.first().json.error;\nconst msg = typeof err === 'string' ? err : (err && (err.message || err.description)) || 'ElevenLabs não devolveu áudio';\nreturn [{ json: { ...o, voz_erro: String(msg).slice(0, 300) } }];"
+      },
+      "id": "9095d2ec-e940-573d-870b-ecf1cc052b7c",
+      "name": "Voz Falhou",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4160,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_logs (chat_id, user_id, canal, tipo, payload) VALUES ('{{ $json.chat_id }}', {{ $json.user_id || 0 }}, 'telegram', 'erro_voz', ('{{ JSON.stringify({ erro: $json.voz_erro || '' }).replace(/'/g, \"''\") }}')::jsonb);",
+        "options": {}
+      },
+      "id": "c224d4d0-49aa-583c-8d5f-857fa16b34f4",
+      "name": "Log Erro Voz",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -3920,
+        1212
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ponto único de entrada da execução externa (direto, aprovado ou retomada).\nreturn [$input.first()];"
+      },
+      "id": "b07ff86d-4058-5d57-9f7f-997cc6467b64",
+      "name": "Preparar Tarefa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO general_tasks (task_id,chat_id,agent_name,tipo,destino,pedido,pendencia_id,state) VALUES ('{{ $json.task_id }}','{{ $json.chat_id }}','{{ String($json.agent_name || '').replace(/'/g, \"''\") }}','{{ String($json.tipo || '').replace(/'/g, \"''\") }}','{{ $json.destino }}','{{ String($json.pedido || '').replace(/'/g, \"''\").slice(0, 500) }}',{{ $json.pendencia_id || 'NULL' }},'running') ON CONFLICT (task_id) DO NOTHING RETURNING task_id;",
+        "options": {}
+      },
+      "id": "174c59cd-26b4-5b1e-a63e-9938634ea0eb",
+      "name": "Registrar Tarefa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -60,
+        2000
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Se o task_id já existia, a execução é DUPLICADA: não executa de novo.\nconst rows = $input.all().map(i => i.json).filter(r => r.task_id);\nif (!rows.length) return [];\nreturn [{ json: $('Preparar Tarefa').first().json }];"
+      },
+      "id": "563f3d05-8c8e-5118-b545-657ce55138b0",
+      "name": "Ctx Tarefa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "849a11bb-6397-57e3-a64d-9286d43587af",
+                    "leftValue": "={{ $json.destino }}",
+                    "rightValue": "worker",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "worker"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "d6535ffd-4bdb-5556-a0bb-233d474dd44e",
+                    "leftValue": "={{ $json.destino }}",
+                    "rightValue": "central",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "central"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "109e478a-5630-59c8-8857-3352340b5164",
+                    "leftValue": "={{ $json.destino }}",
+                    "rightValue": "executor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "executor"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "248fc53e-e1d2-5e17-9375-cdd790e8c508",
+      "name": "Destino?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        420,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "10e46e2b-8dcd-58b4-bea1-4486d7fd66d9",
+      "name": "Chamar Worker PC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        1880
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "Worker PC (X-AGENT-TOKEN)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 240000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "411da8f7-ea67-5ff4-b977-7a1934c2ce1d",
+      "name": "Chamar Central",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        2020
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "OpenClaw Central (X-CENTRAL-TOKEN)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "21ae9482-2a31-51e1-bf3c-6224d0de55b6",
+      "name": "Chamar Agente Executor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        2160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "Agente Executor (webhook)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Preparar Tarefa').first().json;\nreturn [{ json: { ...c, state: 'failed', verified: false, reason: 'Tipo de ação sem destino de execução (' + (c.tipo || '?') + ').', evidence: null, result_pt: '', need_input: false, is_error: true, agente_status: null } }];"
+      },
+      "id": "a1ce4288-fe97-56dc-b098-1696bb33ef64",
+      "name": "Falha Roteamento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        2300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normaliza a resposta de QUALQUER destino (Worker, Central, Executor) para o contrato único:\n// {task_id, status: completed|running|waiting_input|failed, result_pt, evidence:{verified, checks[]}}\n// Sucesso NUNCA é inferido de HTTP 200 nem de texto: só de status + evidência.\nfunction normalize(res, ctx) {\n  let body = res.body !== undefined ? res.body : res;\n  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = { _raw: body.slice(0, 300) }; } }\n  if (body === null || typeof body !== 'object') body = { _raw: String(body).slice(0, 300) };\n  const http = Number(res.statusCode || 0);\n  const VALID = ['completed', 'running', 'waiting_input', 'failed'];\n  const netErr = (res.error && !res.statusCode)\n    ? (typeof res.error === 'string' ? res.error : (res.error.message || res.error.code || JSON.stringify(res.error))) : '';\n  let state = 'unknown', reason = '';\n  if (netErr) { state = 'failed'; reason = 'Sem resposta de ' + ctx.destino + ': ' + String(netErr).slice(0, 200); }\n  else if (http >= 400) {\n    state = 'failed';\n    reason = 'HTTP ' + http + ' de ' + ctx.destino + ': ' + String(body.detail || body.error || body.error_code || body.result_pt || JSON.stringify(body)).slice(0, 300);\n  } else {\n    const st = String(body.status || '').toLowerCase();\n    if (VALID.includes(st)) state = st;\n    else reason = 'A resposta de ' + ctx.destino + ' não traz o campo status do contrato (recebido: ' + JSON.stringify(body).slice(0, 200) + ')';\n    const expected = (ctx.body && ctx.body.task_id) || ctx.task_id;\n    if (body.task_id && body.task_id !== expected) { state = 'unknown'; reason = 'task_id da resposta (' + body.task_id + ') difere do enviado (' + expected + ')'; }\n  }\n  const evidence = (body.evidence && typeof body.evidence === 'object') ? body.evidence : null;\n  const checks = Array.isArray(evidence && evidence.checks) ? evidence.checks : [];\n  const verified = state === 'completed' && evidence !== null && evidence.verified === true && checks.length > 0 && checks.every(c => c && c.ok === true);\n  if (state === 'failed' && !reason) reason = String(body.result_pt || body.error_code || 'falha sem detalhe').slice(0, 300);\n  return { state, verified, reason, evidence, body,\n    result_pt: String(body.result_pt || body.reply_text || '').slice(0, 1500),\n    error_code: body.error_code || null, http_status: http || null, meta: body.meta || null };\n}\n\nconst res = $input.first().json;\nconst ctx = $('Preparar Tarefa').first().json;\nconst n = normalize(res, ctx);\nlet agente_status = null;\nif (ctx.tipo === 'testar_agente') {\n  const pend = (n.meta && n.meta.conexoes_pendentes) || [];\n  if (n.state === 'completed' && n.verified) agente_status = { status: pend.length ? 'aguardando_conexao' : 'ativo', teste_ok: true, pendentes: pend };\n  else if (n.error_code === 'CONNECTION_MISSING') agente_status = { status: 'aguardando_conexao', teste_ok: false, pendentes: pend };\n  else agente_status = { status: 'erro', teste_ok: false, pendentes: [] };\n}\nreturn [{ json: { ...ctx, state: n.state, verified: n.verified, reason: n.reason, result_pt: n.result_pt, evidence: n.evidence,\n  error_code: n.error_code, http_status: n.http_status, meta: n.meta, agente_status,\n  need_input: n.state === 'waiting_input', input_type: ['otp', 'password', 'captcha', 'confirm'].includes(n.body.input_type) ? n.body.input_type : 'otp', prompt_pt: n.body.prompt_pt, has_image: n.body.has_image === true,\n  payload_in: n.body.payload || {}, is_error: n.state === 'failed' || n.state === 'unknown' } }];"
+      },
+      "id": "dcc05089-a90b-586b-9ad2-173a5840288a",
+      "name": "Parse Agente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        2020
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [$input.first()];"
+      },
+      "id": "c09f2bbd-b9f4-5293-85e5-b172296c3460",
+      "name": "Estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        2020
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE general_tasks SET state='{{ $json.state }}', result_pt='{{ String($json.result_pt || '').replace(/'/g, \"''\").slice(0, 1500) }}', evidence=('{{ JSON.stringify({ evidence: $json.evidence || {}, verified: $json.verified === true, reason: $json.reason || '' }).replace(/'/g, \"''\") }}')::jsonb, erro=NULLIF('{{ String($json.reason || '').replace(/'/g, \"''\").slice(0, 500) }}',''), updated_at=NOW() WHERE task_id='{{ $json.task_id }}' RETURNING task_id;",
+        "options": {}
+      },
+      "id": "da7d90be-6d3c-5034-a800-11e8cc836339",
+      "name": "Atualizar Tarefa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1420,
+        2020
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Estado').first().json }];"
+      },
+      "id": "0f21fd20-29fd-5919-b632-f2e6b6e327e4",
+      "name": "Estado Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        2020
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1f243699-39fd-56e9-959f-55de28ce1eef",
+              "leftValue": "={{ $json.tipo === 'testar_agente' && !!$json.agente_status }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a9adcc14-4a06-57f8-863e-e1c1efa02e63",
+      "name": "Agente Teste?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        2320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE general_agentes SET status='{{ $json.agente_status.status }}', teste_ok={{ $json.agente_status.teste_ok ? 'TRUE' : 'FALSE' }}, ultimo_teste=NOW(), ultimo_erro={{ $json.agente_status.status === 'erro' ? (\"'\" + String($json.reason || $json.result_pt || 'teste sem verificação').replace(/'/g, \"''\").slice(0, 500) + \"'\") : 'NULL' }}, config=jsonb_set(COALESCE(config,'{}'::jsonb),'{conexoes_pendentes}',('{{ JSON.stringify($json.agente_status.pendentes || []) }}')::jsonb), ativo=TRUE WHERE nome='{{ String($json.agent_name || '').replace(/'/g, \"''\") }}' RETURNING nome,status;",
+        "options": {}
+      },
+      "id": "07027539-8ecb-54ee-88a7-1eb7d8efa7e1",
+      "name": "Atualizar Agente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2100,
+        2320
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "f60f37e7-77fb-5a2e-91b9-723375cefe85",
+              "leftValue": "={{ $json.origem === 'retomada' }}",
+              "rightValue": "={{true}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "634773ff-b35f-5b86-976e-f2393c30dc89",
+      "name": "Retomada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        2460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Resultado OK').first().json }];"
+      },
+      "id": "e110cf63-ca8a-5345-a810-4c640e41aa1f",
+      "name": "Restaurar Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3076,
+        1664
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "b44225e7-d797-5ff4-808c-04460fa7a2c8",
+      "name": "Acompanhar Tarefas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -300,
+        2700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT task_id,chat_id,agent_name FROM general_tasks WHERE state='running' AND destino='worker' AND created_at > NOW() - INTERVAL '2 hours' AND updated_at < NOW() - INTERVAL '20 seconds' ORDER BY created_at LIMIT 5;",
+        "options": {}
+      },
+      "id": "1733fd7a-13c2-5ef5-8331-6ca8cc31f6a5",
+      "name": "Tarefas Running",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -60,
+        2700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const WORKER_URL = 'http://100.107.36.118:8787';\nreturn $input.all().filter(i => i.json.task_id).map(i => ({ json: { ...i.json, destino: 'worker', url: WORKER_URL + '/task/' + i.json.task_id, body: { task_id: i.json.task_id } } }));"
+      },
+      "id": "02236172-083e-56c0-8d7d-a15680b74268",
+      "name": "Montar Consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        2700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "abaac817-fb36-5650-9ffe-7afb8bcdc95f",
+      "name": "Consultar Worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        2700
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR",
+          "name": "Worker PC (X-AGENT-TOKEN)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normaliza a resposta de QUALQUER destino (Worker, Central, Executor) para o contrato único:\n// {task_id, status: completed|running|waiting_input|failed, result_pt, evidence:{verified, checks[]}}\n// Sucesso NUNCA é inferido de HTTP 200 nem de texto: só de status + evidência.\nfunction normalize(res, ctx) {\n  let body = res.body !== undefined ? res.body : res;\n  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = { _raw: body.slice(0, 300) }; } }\n  if (body === null || typeof body !== 'object') body = { _raw: String(body).slice(0, 300) };\n  const http = Number(res.statusCode || 0);\n  const VALID = ['completed', 'running', 'waiting_input', 'failed'];\n  const netErr = (res.error && !res.statusCode)\n    ? (typeof res.error === 'string' ? res.error : (res.error.message || res.error.code || JSON.stringify(res.error))) : '';\n  let state = 'unknown', reason = '';\n  if (netErr) { state = 'failed'; reason = 'Sem resposta de ' + ctx.destino + ': ' + String(netErr).slice(0, 200); }\n  else if (http >= 400) {\n    state = 'failed';\n    reason = 'HTTP ' + http + ' de ' + ctx.destino + ': ' + String(body.detail || body.error || body.error_code || body.result_pt || JSON.stringify(body)).slice(0, 300);\n  } else {\n    const st = String(body.status || '').toLowerCase();\n    if (VALID.includes(st)) state = st;\n    else reason = 'A resposta de ' + ctx.destino + ' não traz o campo status do contrato (recebido: ' + JSON.stringify(body).slice(0, 200) + ')';\n    const expected = (ctx.body && ctx.body.task_id) || ctx.task_id;\n    if (body.task_id && body.task_id !== expected) { state = 'unknown'; reason = 'task_id da resposta (' + body.task_id + ') difere do enviado (' + expected + ')'; }\n  }\n  const evidence = (body.evidence && typeof body.evidence === 'object') ? body.evidence : null;\n  const checks = Array.isArray(evidence && evidence.checks) ? evidence.checks : [];\n  const verified = state === 'completed' && evidence !== null && evidence.verified === true && checks.length > 0 && checks.every(c => c && c.ok === true);\n  if (state === 'failed' && !reason) reason = String(body.result_pt || body.error_code || 'falha sem detalhe').slice(0, 300);\n  return { state, verified, reason, evidence, body,\n    result_pt: String(body.result_pt || body.reply_text || '').slice(0, 1500),\n    error_code: body.error_code || null, http_status: http || null, meta: body.meta || null };\n}\n\nfunction buildMsg(s) {\n  const nome = s.agent_name ? '[' + s.agent_name + '] ' : '';\n  const ev = s.evidence || {};\n  const lines = (Array.isArray(ev.checks) ? ev.checks : []).slice(0, 4)\n    .map(c => (c.ok ? '✔ ' : '✘ ') + (c.type || '') + (c.path ? ': ' + c.path : '') + (c.id ? ' #' + c.id : ''));\n  let head;\n  if (s.state === 'completed' && s.verified) head = '✅ Executado e verificado.';\n  else if (s.state === 'completed') head = '⚠️ Concluído, mas SEM verificação independente do efeito. Não posso afirmar que a ação aconteceu.';\n  else if (s.state === 'running') head = '⏳ Em andamento. Vou acompanhar e aviso quando terminar (peça: \"status da tarefa ' + s.task_id + '\").';\n  else if (s.state === 'failed') head = '❌ Falhou: ' + (s.reason || 'sem detalhe');\n  else head = '❓ Resultado desconhecido: não confirmei que a tarefa foi executada. Motivo: ' + (s.reason || 'sem detalhe');\n  let txt = nome + head;\n  if (s.result_pt) txt += '\\n' + s.result_pt;\n  if (lines.length) txt += '\\n' + lines.join('\\n');\n  if (s.agente_status) txt += '\\nStatus do agente: ' + s.agente_status.status + (s.agente_status.pendentes && s.agente_status.pendentes.length ? ' (conexões pendentes: ' + s.agente_status.pendentes.join(', ') + ')' : '');\n  txt += '\\nTarefa: ' + s.task_id + (s.origem === 'aprovacao' ? ' (ação da pendência #' + (s.pendencia_id || '?') + ')' : '');\n  return txt;\n}\n\nconst ctxs = $('Montar Consulta').all();\nconst out = [];\n$input.all().forEach((it, i) => {\n  const ctx = ctxs[i].json;\n  const n = normalize(it.json, ctx);\n  if (n.state === 'running') return;                // ainda em andamento: tenta de novo no próximo ciclo\n  const s = { ...ctx, state: n.state, verified: n.verified, reason: n.reason, result_pt: n.result_pt, evidence: n.evidence, origem: 'acompanhamento' };\n  out.push({ json: { ...s, reply_text: buildMsg(s) } });\n});\nreturn out;"
+      },
+      "id": "5574c66f-6c1a-53ef-8e56-4fde7f23b20f",
+      "name": "Parse Consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        2700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE general_tasks SET state='{{ $json.state }}', result_pt='{{ String($json.result_pt || '').replace(/'/g, \"''\").slice(0, 1500) }}', evidence=('{{ JSON.stringify({ evidence: $json.evidence || {}, verified: $json.verified === true, reason: $json.reason || '' }).replace(/'/g, \"''\") }}')::jsonb, erro=NULLIF('{{ String($json.reason || '').replace(/'/g, \"''\").slice(0, 500) }}',''), updated_at=NOW() WHERE task_id='{{ $json.task_id }}' RETURNING task_id;",
+        "options": {}
+      },
+      "id": "fa6bdf9c-2790-56e4-8f01-f78c764199ca",
+      "name": "Atualizar Tarefa Poll",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        900,
+        2700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "0ORmAig8ppcK65yV",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('Parse Consulta').all().map(i => ({ json: { chat_id: i.json.chat_id, reply_text: '🔔 Atualização de tarefa\\n' + i.json.reply_text } }));"
+      },
+      "id": "526865c1-5cf6-5ac7-a636-decc99b599dc",
+      "name": "Msg Poll",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        2700
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ String($json.reply_text).slice(0, 4000) }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b3e5055b-92e9-5174-845e-fa4cde80e594",
+      "name": "Avisar Tarefa",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1380,
+        2700
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "5tU8eIaFS3fDn3Qi",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Padronizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar": {
+      "main": [
+        [
+          {
+            "node": "Só Felipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Só Felipe": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Init": {
+      "main": [
+        [
+          {
+            "node": "Deduplicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicar": {
+      "main": [
+        [
+          {
+            "node": "Novo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Novo?": {
+      "main": [
+        [
+          {
+            "node": "É Novo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Novo?": {
+      "main": [
+        [
+          {
+            "node": "Tem Voz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Voz?": {
+      "main": [
+        [
+          {
+            "node": "Baixar Voz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Voz": {
+      "main": [
+        [
+          {
+            "node": "Fix Binário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Binário": {
+      "main": [
+        [
+          {
+            "node": "Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper": {
+      "main": [
+        [
+          {
+            "node": "Setar Transcrição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setar Transcrição": {
+      "main": [
+        [
+          {
+            "node": "Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log": {
+      "main": [
+        [
+          {
+            "node": "Buscar Aguardando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Aguardando": {
+      "main": [
+        [
+          {
+            "node": "Tem Aguardando?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Aguardando?": {
+      "main": [
+        [
+          {
+            "node": "Retomar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retomar?": {
+      "main": [
+        [
+          {
+            "node": "Montar Retomar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apagar Aguardando": {
+      "main": [
+        []
+      ]
+    },
+    "Contexto": {
+      "main": [
+        [
+          {
+            "node": "General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General": {
+      "main": [
+        [
+          {
+            "node": "Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória": {
+      "ai_memory": [
+        [
+          {
+            "node": "General",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse": {
+      "main": [
+        [
+          {
+            "node": "Forçar Aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forçar Aprovação": {
+      "main": [
+        [
+          {
+            "node": "Decidir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir": {
+      "main": [
+        [
+          {
+            "node": "Rota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rota": {
+      "main": [
+        [
+          {
+            "node": "Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Pendência",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classificar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Input General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Áudio?": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Pendência": {
+      "main": [
+        [
+          {
+            "node": "Criar Pendência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Pendência": {
+      "main": [
+        [
+          {
+            "node": "Formatar Prévia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Prévia": {
+      "main": [
+        [
+          {
+            "node": "Enviar Prévia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar": {
+      "main": [
+        [
+          {
+            "node": "Externo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Externo?": {
+      "main": [
+        [
+          {
+            "node": "Montar Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Montar SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa Input?": {
+      "main": [
+        [
+          {
+            "node": "Salvar Aguardando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resultado OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Aguardando": {
+      "main": [
+        [
+          {
+            "node": "Msg Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg Input": {
+      "main": [
+        [
+          {
+            "node": "Enviar Pedido Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado OK": {
+      "main": [
+        [
+          {
+            "node": "Log Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar SQL": {
+      "main": [
+        [
+          {
+            "node": "Executar SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar SQL": {
+      "main": [
+        [
+          {
+            "node": "Resultado SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Input General": {
+      "main": [
+        [
+          {
+            "node": "Salvar Input General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Input General": {
+      "main": [
+        [
+          {
+            "node": "Msg Input General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg Input General": {
+      "main": [
+        [
+          {
+            "node": "Enviar Input General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reexecutar?": {
+      "main": [
+        [
+          {
+            "node": "Prep Reexecução",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Reexecução": {
+      "main": [
+        [
+          {
+            "node": "Preparar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Só Erros?": {
+      "main": [
+        [
+          {
+            "node": "Log Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "DB Init",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catálogo": {
+      "main": [
+        [
+          {
+            "node": "Preferências",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preferências": {
+      "main": [
+        [
+          {
+            "node": "Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs": {
+      "main": [
+        [
+          {
+            "node": "Áudio OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Áudio OK?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Voz Falhou",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voz Falhou": {
+      "main": [
+        [
+          {
+            "node": "Enviar Texto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Erro Voz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Preparar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Retomar": {
+      "main": [
+        [
+          {
+            "node": "Preparar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Tarefa": {
+      "main": [
+        [
+          {
+            "node": "Registrar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Tarefa": {
+      "main": [
+        [
+          {
+            "node": "Ctx Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ctx Tarefa": {
+      "main": [
+        [
+          {
+            "node": "Destino?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destino?": {
+      "main": [
+        [
+          {
+            "node": "Chamar Worker PC",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chamar Central",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chamar Agente Executor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falha Roteamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Worker PC": {
+      "main": [
+        [
+          {
+            "node": "Parse Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Central": {
+      "main": [
+        [
+          {
+            "node": "Parse Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Agente Executor": {
+      "main": [
+        [
+          {
+            "node": "Parse Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falha Roteamento": {
+      "main": [
+        [
+          {
+            "node": "Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Tarefa": {
+      "main": [
+        [
+          {
+            "node": "Estado Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Agente": {
+      "main": [
+        [
+          {
+            "node": "Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado Final": {
+      "main": [
+        [
+          {
+            "node": "Precisa Input?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Só Erros?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agente Teste?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retomada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Teste?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retomada?": {
+      "main": [
+        [
+          {
+            "node": "Apagar Aguardando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Exec": {
+      "main": [
+        [
+          {
+            "node": "Restaurar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restaurar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado SQL": {
+      "main": [
+        [
+          {
+            "node": "Reexecutar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acompanhar Tarefas": {
+      "main": [
+        [
+          {
+            "node": "Tarefas Running",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tarefas Running": {
+      "main": [
+        [
+          {
+            "node": "Montar Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Consulta": {
+      "main": [
+        [
+          {
+            "node": "Consultar Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Worker": {
+      "main": [
+        [
+          {
+            "node": "Parse Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Consulta": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Tarefa Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Tarefa Poll": {
+      "main": [
+        [
+          {
+            "node": "Msg Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg Poll": {
+      "main": [
+        [
+          {
+            "node": "Avisar Tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e713b870-7425-5eeb-af7a-55e59c409012",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4727e7f30d147ce7ed4c5b239012c65105f64ef89a16fc3d825f9fec3507f155"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
